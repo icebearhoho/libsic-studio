@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-const EFFECT_NAMES = { none: 'None', rain: 'Rain', snow: 'Snow', fireflies: 'Fireflies', stars: 'Stars' };
+const EFFECT_NAMES = { none: 'None', rain: 'Rain', snow: 'Snow', fireflies: 'Fireflies', stars: 'Stars', dust: 'Dust' };
 
 // A button that opens a short list above it. The list closes when something in it is picked,
 // on Escape, and on a click anywhere else.

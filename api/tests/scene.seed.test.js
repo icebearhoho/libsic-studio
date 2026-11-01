@@ -16,7 +16,7 @@ describe('scene seed data', () => {
   it.each(scenes.map((s) => [s.slug, s]))('%s has layers and one object for each kind of click', (slug, scene) => {
     expect(scene.layers.length).toBeGreaterThanOrEqual(4);
     // a big object (the lamp) may be split into several click areas, so compare the kinds, not the count
-    expect([...new Set(scene.objects.map((o) => o.action.type))].sort()).toEqual(['nextTrack', 'toggleEffect', 'toggleLight']);
+    expect([...new Set(scene.objects.map((o) => o.action.type))]).toEqual(expect.arrayContaining(['nextTrack', 'toggleEffect', 'toggleLight']));
   });
 
   it.each(scenes.map((s) => [s.slug, s]))('%s default effect (if it has one) is one of its own effects', (slug, scene) => {

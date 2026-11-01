@@ -33,6 +33,18 @@ const BUILDERS = {
       '--blink': sec(between(r, 2.5, 5)),
       '--delay': sec(-between(r, 0, 10)),
     })),
+  // specks of dust floating in the sunlight: slow, small and soft
+  dust: () =>
+    makeParticles(48, 55, (r) => ({
+      '--x': pct(between(r, 4, 72)),
+      '--y': pct(between(r, 18, 86)),
+      '--size': px(between(r, 2.2, 5.2)),
+      '--dur': sec(between(r, 14, 26)),
+      '--blink': sec(between(r, 4, 9)),
+      '--delay': sec(-between(r, 0, 26)),
+      '--dx': px(between(r, -46, 46)),
+      '--dy': px(between(r, -60, 30)),
+    })),
   stars: () =>
     makeParticles(70, 44, (r) => ({
       '--x': pct(between(r, 0, 100)),

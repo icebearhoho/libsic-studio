@@ -291,7 +291,7 @@ components:
 
     Effect:
       type: string
-      enum: [rain, snow, fireflies, stars]
+      enum: [rain, snow, fireflies, stars, dust]
       description: An animated weather or sky effect.
 
     Scene:
@@ -470,6 +470,18 @@ components:
         light:
           type: boolean
           description: True for lamp light and its glow. These layers fade out when the lights are switched off.
+        night:
+          type: boolean
+          description: True for a layer that is only shown at night (when the lights are off), such as the night sky in a window.
+        curtain:
+          type: object
+          required: [scale, origin]
+          description: |
+            Marks the layer as a curtain. When the room's curtains are closed it is drawn `scale` times wider,
+            growing out of the edge at `origin`.
+          properties:
+            scale: { type: number, minimum: 1, maximum: 4 }
+            origin: { type: number, minimum: 0, maximum: 100, description: "Percent of the layer's own width that stays in place (0 = the left edge, 100 = the right edge)." }
         item:
           type: string
           description: |
@@ -487,7 +499,7 @@ components:
           properties:
             name:
               type: string
-              enum: [spin, tonearm, sway, steam, pulse]
+              enum: [spin, tonearm, sway, steam, pulse, breathe, drift, flick, billow]
             pivot:
               type: object
               description: The point it turns around, in percent of the layer's own picture.
@@ -498,6 +510,8 @@ components:
             delay: { type: number, description: Seconds before it starts. }
             squash: { type: number, minimum: 0.05, maximum: 1, description: Spin only. How flat the record looks. }
             rest: { type: number, description: Tonearm only. Angle in degrees when the music is paused. }
+            distance: { type: number, minimum: 0, maximum: 100, description: "Drift only. How far it travels, as a percent of the layer's width." }
+            amplitude: { type: number, minimum: 0, maximum: 45, description: "Sway, billow and flick. How far it swings, in degrees." }
             skew: { type: number, description: Clock only. Tilt in degrees. }
 
     SceneObject:
@@ -525,7 +539,7 @@ components:
           properties:
             type:
               type: string
-              enum: [toggleLight, toggleEffect, nextTrack]
+              enum: [toggleLight, toggleEffect, toggleCurtains, nextTrack]
             effect:
               $ref: '#/components/schemas/Effect'
           description: What a click does. `effect` is given when the type is `toggleEffect`.
@@ -535,11 +549,15 @@ components:
       properties:
         effect:
           type: string
-          enum: [none, rain, snow, fireflies, stars]
+          enum: [none, rain, snow, fireflies, stars, dust]
           default: none
         lightOn:
           type: boolean
           default: true
+          description: "False means night: the sunlight layers fade out and the layers made for the night come in."
+        curtainsClosed:
+          type: boolean
+          default: false
         volume:
           type: number
           minimum: 0

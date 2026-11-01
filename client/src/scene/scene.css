@@ -159,6 +159,31 @@
   50% { opacity: 1; }
 }
 
+/* Dust floating in the sun: tiny soft specks that wander slowly and fade in and out. */
+.effect-dust i {
+  left: var(--x);
+  top: var(--y);
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  /* a soft glow drawn as a gradient (cheaper to paint than a shadow, and there are many of them) */
+  background: radial-gradient(circle, rgba(255, 246, 220, 1) 0 35%, rgba(255, 226, 160, 0.5) 55%, rgba(255, 226, 160, 0) 100%);
+  transform: scale(2.4);
+  opacity: 0;
+  will-change: transform, opacity;
+  animation:
+    dust-drift var(--dur) ease-in-out var(--delay) infinite alternate,
+    dust-fade var(--blink) ease-in-out var(--delay) infinite;
+}
+@keyframes dust-drift {
+  from { transform: translate3d(0, 0, 0) scale(2.4); }
+  to { transform: translate3d(var(--dx), var(--dy), 0) scale(2.4); }
+}
+@keyframes dust-fade {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
 /* Stars */
 .effect-stars i {
   left: var(--x);
@@ -195,6 +220,30 @@
 .stage.lights-off .layer[data-light] {
   opacity: 0;
 }
+/* Night pictures (the night sky in a window) come in slowly when the lights go off. */
+.layer[data-night] {
+  opacity: 0;
+  transition: transform 0.25s ease-out, opacity 1.6s ease;
+}
+.stage.lights-off .layer[data-night] {
+  opacity: 1;
+}
+
+/* Curtains slide shut: the layer grows out of its outer edge. Only transform changes, so it stays smooth. */
+.curtain {
+  width: 100%;
+  height: 100%;
+  transition: transform 1.8s cubic-bezier(0.45, 0, 0.2, 1);
+  will-change: transform;
+}
+.stage.curtains-closed .curtain {
+  transform: scaleX(var(--closed-scale, 2));
+}
+/* the hover label must not be stretched with the cloth */
+.stage.curtains-closed .curtain .hotspot-label {
+  transform: translate(-50%, 6px) scaleX(calc(1 / var(--closed-scale, 2)));
+}
+
 /* A scene with real lamp layers only gets a gentle dark layer, so the city outside stays lit. */
 .stage.has-lights.lights-off .dim {
   background: rgba(4, 8, 22, 0.4);
@@ -239,8 +288,8 @@
   animation: sway var(--dur) ease-in-out var(--delay) infinite alternate;
 }
 @keyframes sway {
-  from { transform: rotate(-2.2deg); }
-  to { transform: rotate(2.2deg); }
+  from { transform: rotate(calc(var(--amp, 2.2deg) * -1)); }
+  to { transform: rotate(var(--amp, 2.2deg)); }
 }
 
 /* Steam rises from the mug and fades. */
@@ -260,6 +309,56 @@
 @keyframes pulse {
   from { opacity: 0.72; }
   to { opacity: 1; }
+}
+
+/* All movements below only change transform or opacity, so the browser can run them on the graphics card
+   and they stay smooth. Slow back-and-forth (alternate) with ease-in-out has no jump where a round ends. */
+.anim-breathe,
+.anim-drift,
+.anim-flick,
+.anim-billow,
+.anim-sway,
+.anim-pulse,
+.anim-steam {
+  will-change: transform, opacity;
+}
+
+/* A sleeping cat breathes: the chest rises and falls a little. */
+.anim-breathe {
+  animation: breathe var(--dur) ease-in-out var(--delay) infinite alternate;
+}
+@keyframes breathe {
+  from { transform: scale(1, 1); }
+  to { transform: scale(1.012, 1.03); }
+}
+
+/* Clouds slide slowly across the sky and back. */
+.anim-drift {
+  animation: drift var(--dur) ease-in-out var(--delay) infinite alternate;
+}
+@keyframes drift {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(calc(var(--distance, 4%) * -1), 0, 0); }
+}
+
+/* A tail rests, then flicks once in a while. */
+.anim-flick {
+  animation: flick var(--dur) ease-in-out var(--delay) infinite;
+}
+@keyframes flick {
+  0%, 62%, 100% { transform: rotate(0deg); }
+  70% { transform: rotate(calc(var(--amp, 5deg) * 1)); }
+  78% { transform: rotate(calc(var(--amp, 5deg) * -0.6)); }
+  86% { transform: rotate(calc(var(--amp, 5deg) * 0.3)); }
+}
+
+/* A curtain moves in the breeze: it sways at the top rod and the cloth widens a little. */
+.anim-billow {
+  animation: billow var(--dur) ease-in-out var(--delay) infinite alternate;
+}
+@keyframes billow {
+  from { transform: skewX(calc(var(--amp, 1.2deg) * -0.6)) scaleX(1); }
+  to { transform: skewX(var(--amp, 1.2deg)) scaleX(1.012); }
 }
 
 /* A small picture repeated over the whole layer (film grain). */
@@ -300,7 +399,12 @@
   .anim-sway,
   .anim-steam,
   .anim-pulse,
+  .anim-breathe,
+  .anim-drift,
+  .anim-flick,
+  .anim-billow,
   .anim-spin .spin,
   .clock-face .colon { animation: none; }
   .layer { transition: opacity 0.6s ease; }
+  .curtain { transition: none; }
 }

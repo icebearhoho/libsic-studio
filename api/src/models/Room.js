@@ -32,6 +32,7 @@ const roomSchema = new Schema(
     settings: {
       effect: { type: String, enum: [...EFFECTS, 'none'], default: 'none' },
       lightOn: { type: Boolean, default: true },
+      curtainsClosed: { type: Boolean, default: false },
       volume: { type: Number, min: 0, max: 1, default: 0.7 },
     },
     // Missing means "show the scene's default arrangement", an empty list means an empty room.

@@ -165,7 +165,7 @@ describe('saving a new room', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Light on' }));
     await userEvent.click(screen.getByRole('button', { name: 'Save room' }));
 
-    expect(api.createRoom).toHaveBeenCalledWith({ name: 'My room', sceneSlug: 'other', settings: { effect: 'stars', lightOn: false }, items: null });
+    expect(api.createRoom).toHaveBeenCalledWith({ name: 'My room', sceneSlug: 'other', settings: { effect: 'stars', lightOn: false, curtainsClosed: false }, items: null });
     expect(getMyRooms()[0]).toMatchObject({ code: savedRoom.code, editKey: 'new-secret' });
     expect(getLastRoomCode()).toBe(savedRoom.code);
 
@@ -269,7 +269,7 @@ describe('editing your own room', () => {
     expect(api.updateRoom).toHaveBeenCalledWith(savedRoom.code, 'secret-key', {
       name: 'Study 2',
       sceneSlug: 'other',
-      settings: { effect: 'stars', lightOn: false },
+      settings: { effect: 'stars', lightOn: false, curtainsClosed: false },
       items: null,
     });
     expect(await screen.findByRole('status')).toHaveTextContent('Changes saved');

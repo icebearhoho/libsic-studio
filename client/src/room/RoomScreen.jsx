@@ -40,7 +40,7 @@ export default function RoomScreen({ code }) {
   const [attempt, setAttempt] = useState(0); // bump to try loading again
 
   const [slug, setSlug] = useState('');
-  const [settings, setSettings] = useState({ effect: 'none', lightOn: true });
+  const [settings, setSettings] = useState({ effect: 'none', lightOn: true, curtainsClosed: false });
   const [name, setName] = useState('');
   const [items, setItems] = useState(null); // the objects the visitor placed; null = the scene's default arrangement
   const [decorating, setDecorating] = useState(false);
@@ -70,7 +70,7 @@ export default function RoomScreen({ code }) {
           const scene = list.find((s) => s.slug === room.sceneSlug) || list[0];
           setSaved(room);
           setSlug(scene?.slug ?? '');
-          setSettings({ effect: room.settings.effect, lightOn: room.settings.lightOn });
+          setSettings({ effect: room.settings.effect, lightOn: room.settings.lightOn, curtainsClosed: Boolean(room.settings.curtainsClosed) });
           setName(room.name);
           setItems(room.items ?? null);
           setLastRoomCode(room.code);
@@ -135,6 +135,7 @@ export default function RoomScreen({ code }) {
       slug !== saved.sceneSlug ||
       settings.effect !== saved.settings.effect ||
       settings.lightOn !== saved.settings.lightOn ||
+      settings.curtainsClosed !== Boolean(saved.settings.curtainsClosed) ||
       !itemsEqual(items, saved.items));
   const link = saved ? `${window.location.origin}/r/${saved.code}` : '';
 

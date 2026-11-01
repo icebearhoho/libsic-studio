@@ -91,6 +91,32 @@ describe('Scene model', () => {
       expect(await validationErrors(new Scene(data))).toEqual({});
     });
 
+    it('accepts the calm animations and their distance and amplitude', async () => {
+      const data = validScene();
+      data.layers.push(
+        { name: 'clouds', image: '/scenes/test-room/clouds.webp', depth: 0.1, anim: { name: 'drift', distance: 6, duration: 200 } },
+        { name: 'curtain', image: '/scenes/test-room/curtain.webp', depth: 0.6, anim: { name: 'billow', amplitude: 1.4, pivot: { x: 50, y: 0 }, duration: 7 } },
+        { name: 'cat', image: '/scenes/test-room/cat.webp', depth: 0.9, anim: { name: 'breathe', pivot: { x: 50, y: 100 }, duration: 4 } },
+        { name: 'tail', image: '/scenes/test-room/tail.webp', depth: 0.9, anim: { name: 'flick', amplitude: 6, duration: 9 } }
+      );
+      expect(await validationErrors(new Scene(data))).toEqual({});
+    });
+
+    it('accepts a night layer and a curtain, and rejects a curtain that grows more than four times', async () => {
+    const data = validScene();
+    data.layers[0].night = true;
+    data.layers[0].curtain = { scale: 2.3, origin: 100 };
+    expect(await validationErrors(new Scene(data))).toEqual({});
+    data.layers[0].curtain = { scale: 5, origin: 0 };
+    expect((await validationErrors(new Scene(data)))['layers.0.curtain.scale']).toBeDefined();
+  });
+
+  it('rejects a drift that travels further than the layer is wide', async () => {
+      const data = validScene();
+      data.layers[0].anim = { name: 'drift', distance: 400 };
+      expect((await validationErrors(new Scene(data)))['layers.0.anim.distance']).toBeDefined();
+    });
+
     it('accepts a clock layer without an image', async () => {
       const data = validScene();
       data.layers.push({ name: 'clock', kind: 'clock', depth: 0.9, box: { x: 20, y: 80, width: 5, height: 5 } });

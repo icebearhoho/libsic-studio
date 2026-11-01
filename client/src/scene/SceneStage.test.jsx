@@ -122,6 +122,59 @@ describe('SceneStage', () => {
       expect(leaf).toHaveStyle({ transformOrigin: '50% 90%' });
     });
 
+    it('passes distance and amplitude on to the calm movements', () => {
+      const calm = {
+        ...scene,
+        layers: [
+          ...scene.layers,
+          { name: 'clouds', image: '/scenes/test-room/clouds.webp', depth: 0.1, anim: { name: 'drift', distance: 6, duration: 200 } },
+          { name: 'curtain', image: '/scenes/test-room/curtain.webp', depth: 0.6, anim: { name: 'billow', amplitude: 1.4, pivot: { x: 50, y: 0 } } },
+          { name: 'cat', image: '/scenes/test-room/cat.webp', depth: 0.9, anim: { name: 'breathe' } },
+          { name: 'tail', image: '/scenes/test-room/tail.webp', depth: 0.9, anim: { name: 'flick', amplitude: 6 } },
+        ],
+      };
+      const { container } = render(<SceneStage scene={calm} settings={settings} onSettingsChange={noop} />);
+      expect(container.querySelector('.anim-drift').style.getPropertyValue('--distance')).toBe('6%');
+      expect(container.querySelector('.anim-billow').style.getPropertyValue('--amp')).toBe('1.4deg');
+      expect(container.querySelector('.anim-billow')).toHaveStyle({ transformOrigin: '50% 0%' });
+      expect(container.querySelector('.anim-breathe')).not.toBeNull();
+      expect(container.querySelector('.anim-flick').style.getPropertyValue('--amp')).toBe('6deg');
+    });
+
+    it('draws a curtain wider when the curtains are closed, with its click area inside it', async () => {
+      const curtained = {
+        ...scene,
+        layers: [...scene.layers, { name: 'curtain', image: '/scenes/test-room/curtain.webp', depth: 0.6, curtain: { scale: 2.3, origin: 100 } }],
+        objects: [...scene.objects, { key: 'curtains', label: 'Curtains', layer: scene.layers.length, x: 0, y: 0, width: 100, height: 100, action: { type: 'toggleCurtains' } }],
+      };
+      function Curtained() {
+        const [settings, setSettings] = useState({ effect: 'none', lightOn: true, curtainsClosed: false });
+        return <SceneStage scene={curtained} settings={settings} onSettingsChange={setSettings} />;
+      }
+      const { container } = render(<Curtained />);
+      const curtain = container.querySelector('.curtain');
+      expect(curtain).toHaveStyle({ transformOrigin: '100% 0%' });
+      expect(curtain.style.getPropertyValue('--closed-scale')).toBe('2.3');
+      expect(screen.getByTestId('stage')).not.toHaveClass('curtains-closed');
+      await userEvent.click(screen.getByRole('button', { name: 'Curtains' }));
+      expect(screen.getByTestId('stage')).toHaveClass('curtains-closed');
+      expect(screen.getByTestId('stage')).not.toHaveClass('lights-off');
+      expect(screen.getByRole('button', { name: 'Curtains' })).toHaveClass('is-on');
+    });
+
+    it('marks a night layer so that it only shows when the lights are off', () => {
+      const nightly = { ...scene, layers: [...scene.layers, { name: 'night sky', image: '/scenes/test-room/night.webp', depth: 0.1, night: true }] };
+      const { container } = render(<SceneStage scene={nightly} settings={{ effect: 'none', lightOn: false }} onSettingsChange={noop} />);
+      expect(container.querySelector('.layer[data-night="true"]')).not.toBeNull();
+      expect(screen.getByTestId('stage')).toHaveClass('lights-off');
+    });
+
+    it('draws floating dust when that effect is switched on', () => {
+      const dusty = { ...scene, effects: ['dust'], effectLayer: 0 };
+      const { container } = render(<SceneStage scene={dusty} settings={{ effect: 'dust', lightOn: true }} onSettingsChange={noop} />);
+      expect(container.querySelectorAll('.effect-dust i').length).toBeGreaterThan(20);
+    });
+
     it('draws the live clock and tiles the grain', () => {
       const { container, getByTestId } = render(<SceneStage scene={extra} settings={settings} onSettingsChange={noop} />);
       expect(getByTestId('clock')).toBeInTheDocument();
