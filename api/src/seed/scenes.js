@@ -7,9 +7,11 @@ const layers = (slug, items) =>
   items.map(([name, depth], i) => ({ name, image: `/scenes/${slug}/layer-${i + 1}.svg`, depth }));
 
 const nightStudy = require('./nightStudy');
+const goldenLoft = require('./goldenLoft');
 
 module.exports = [
   nightStudy,
+  goldenLoft,
   {
     slug: 'rainy-cafe',
     name: 'Rainy Café',
