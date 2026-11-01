@@ -249,6 +249,17 @@ describe('PUT /api/rooms/:code', () => {
     expect((await request(app).get(`/api/rooms/${room.code}`)).body.name).toBe('After');
   });
 
+  it('remembers whether the curtains are closed', async () => {
+    const { room, editKey } = await createRoom({ sceneSlug: 'rainy-cafe' });
+    expect(room.settings.curtainsClosed).toBe(false);
+
+    const res = await request(app).put(`/api/rooms/${room.code}`).set('x-edit-key', editKey).send({ settings: { curtainsClosed: true } });
+
+    expect(res.status).toBe(200);
+    expect(res.body.settings).toMatchObject({ curtainsClosed: true, lightOn: true });
+    expect((await request(app).get(`/api/rooms/${room.code}`)).body.settings.curtainsClosed).toBe(true);
+  });
+
   it('can move the room to another scene or CD', async () => {
     const { room, editKey } = await createRoom();
     const res = await request(app).put(`/api/rooms/${room.code}`).set('x-edit-key', editKey).send({ sceneSlug: 'moon-base', cdCode: 'chill01' });

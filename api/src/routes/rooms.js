@@ -15,7 +15,12 @@ function publicRoom(room) {
     name: room.name,
     sceneSlug: room.sceneSlug,
     cdCode: room.cdCode,
-    settings: { effect: room.settings.effect, lightOn: room.settings.lightOn, volume: room.settings.volume },
+    settings: {
+      effect: room.settings.effect,
+      lightOn: room.settings.lightOn,
+      curtainsClosed: room.settings.curtainsClosed,
+      volume: room.settings.volume,
+    },
     items: room.items ? room.items.map(({ id, key, x, y, scale, flip }) => ({ id, key, x, y, scale, flip })) : null,
     createdAt: room.createdAt,
     updatedAt: room.updatedAt,
@@ -29,7 +34,7 @@ function editableFields(body) {
     if (body[key] !== undefined) fields[key] = body[key];
   }
   if (body.settings && typeof body.settings === 'object') {
-    for (const key of ['effect', 'lightOn', 'volume']) {
+    for (const key of ['effect', 'lightOn', 'curtainsClosed', 'volume']) {
       if (body.settings[key] !== undefined) fields[`settings.${key}`] = body.settings[key];
     }
   }

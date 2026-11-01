@@ -8,7 +8,8 @@ const boxPercent = { type: Number, required: true, min: 0, max: 100 };
 const boxSchema = new Schema({ x: boxPercent, y: boxPercent, width: boxPercent, height: boxPercent }, { _id: false });
 
 // A small movement for a layer. Which one is picked by name:
-//   spin (the record), tonearm, sway (leaves), steam, pulse (glows)
+//   spin (the record), tonearm, sway (leaves), steam, pulse (glows), breathe (a sleeping cat), drift (clouds),
+//   flick (a tail), billow (a curtain in the breeze)
 // pivot: the point it turns around, in percent of the layer's own picture.
 const animSchema = new Schema(
   {
@@ -19,6 +20,8 @@ const animSchema = new Schema(
     squash: { type: Number, min: 0.05, max: 1 }, // spin: how flat the record looks from the side
     rest: { type: Number }, // tonearm: angle in degrees when the music is paused
     skew: { type: Number }, // clock: tilt in degrees
+    distance: { type: Number, min: 0, max: 100 }, // drift: how far it travels, in percent of the layer's width
+    amplitude: { type: Number, min: 0, max: 45 }, // sway, billow, flick: how far it swings, in degrees
   },
   { _id: false }
 );
@@ -46,6 +49,14 @@ const layerSchema = new Schema(
     // The key of the catalog object this layer belongs to. Such a layer is a template: it is drawn once for
     // every copy of the object a room places, and not in its own place in the stack.
     item: { type: String, default: undefined },
+    // true: only shown at night (when the lights are off), for example the night sky seen through a window.
+    night: { type: Boolean, default: undefined },
+    // The layer is a curtain: when the room's curtains are closed it is drawn this many times wider, growing out of
+    // the edge at `origin` (percent of its own width: 0 = the left edge stays, 100 = the right edge stays).
+    curtain: {
+      type: new Schema({ scale: { type: Number, required: true, min: 1, max: 4 }, origin: { type: Number, required: true, min: 0, max: 100 } }, { _id: false }),
+      default: undefined,
+    },
     // false: the picture is not mirrored when its object is flipped (a shadow keeps falling away from the lamp).
     mirror: { type: Boolean, default: undefined },
   },

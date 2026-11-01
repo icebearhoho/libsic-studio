@@ -9,7 +9,7 @@ import './scene.css';
 // Draws one scene: its layers stacked on top of each other (moving with the mouse),
 // the effect on the right layer, and a button over each clickable object.
 //   scene            the scene from the API
-//   settings         { effect, lightOn }, kept by the parent so a saved room can remember them
+//   settings         { effect, lightOn, curtainsClosed }, kept by the parent so a saved room can remember them
 //   onSettingsChange called with the new settings after a click
 //   onNextTrack      called when the music object is clicked (the CD player will use this)
 //   playing          true while music plays: the record spins and the tonearm rests on it
@@ -21,7 +21,9 @@ import './scene.css';
 //   box     where the picture sits, in percent of the stage (default: the whole stage)
 //   blend   "screen" for glows, so they add light instead of covering what is below
 //   light   true for lamp light: it disappears when the lights are switched off
-//   anim    a small movement: spin, tonearm, sway, steam or pulse
+//   night   true for a picture that only shows at night, when the lights are off (the night sky in a window)
+//   curtain a curtain: it is drawn wider while settings.curtainsClosed is true
+//   anim    a small movement: spin, tonearm, sway, steam, pulse, breathe, drift, flick or billow
 //   kind    "clock" draws the live clock instead of a picture
 //   tile    repeats a small picture over the layer (film grain)
 //   item    the layer belongs to an object a visitor can move: it is drawn once for each copy of that object
@@ -37,14 +39,46 @@ export default function SceneStage({ scene, settings, onSettingsChange, onNextTr
 
   const isOn = (object) =>
     (object.action.type === 'toggleLight' && settings.lightOn) ||
+    (object.action.type === 'toggleCurtains' && settings.curtainsClosed) ||
     (object.action.type === 'toggleEffect' && settings.effect === object.action.effect);
 
-  const hasLights = drawList.some(({ layer }) => layer.light);
+  const hasLights = drawList.some(({ layer }) => layer.light || layer.night);
+
+  const content = (layer, flip) =>
+    flip ? (
+      <div className="flip" style={{ transform: 'scaleX(-1)' }}>
+        <LayerContent layer={layer} />
+      </div>
+    ) : (
+      <LayerContent layer={layer} />
+    );
+
+  const hotspots = (templateIndex) =>
+    scene.objects
+      .filter((object) => object.layer === templateIndex)
+      .map((object) => (
+        <button
+          key={object.key}
+          type="button"
+          className={`hotspot${isOn(object) ? ' is-on' : ''}`}
+          style={{
+            left: `${object.x}%`,
+            top: `${object.y}%`,
+            width: `${object.width}%`,
+            height: `${object.height}%`,
+          }}
+          aria-label={object.label}
+          disabled={frozen}
+          onClick={() => handleClick(object)}
+        >
+          <span className="hotspot-label">{object.label}</span>
+        </button>
+      ));
 
   return (
     <div
       ref={stageRef}
-      className={`stage${settings.lightOn ? '' : ' lights-off'}${hasLights ? ' has-lights' : ''}${playing ? '' : ' paused'}`}
+      className={`stage${settings.lightOn ? '' : ' lights-off'}${settings.curtainsClosed ? ' curtains-closed' : ''}${hasLights ? ' has-lights' : ''}${playing ? '' : ' paused'}`}
       data-testid="stage"
       {...handlers}
     >
@@ -56,36 +90,21 @@ export default function SceneStage({ scene, settings, onSettingsChange, onNextTr
           style={layerStyle(box)}
           data-item={itemId}
           data-light={layer.light ? 'true' : undefined}
+          data-night={layer.night ? 'true' : undefined}
           data-blend={layer.blend && layer.blend !== 'normal' ? layer.blend : undefined}
         >
-          {flip ? (
-            <div className="flip" style={{ transform: 'scaleX(-1)' }}>
-              <LayerContent layer={layer} />
+          {layer.curtain ? (
+            <div className="curtain" style={{ transformOrigin: `${layer.curtain.origin}% 0%`, '--closed-scale': layer.curtain.scale }}>
+              {content(layer, flip)}
+              {hotspots(templateIndex)}
             </div>
           ) : (
-            <LayerContent layer={layer} />
+            <>
+              {content(layer, flip)}
+              {templateIndex === scene.effectLayer && <Effect name={settings.effect} />}
+              {hotspots(templateIndex)}
+            </>
           )}
-          {templateIndex === scene.effectLayer && <Effect name={settings.effect} />}
-          {scene.objects
-            .filter((object) => object.layer === templateIndex)
-            .map((object) => (
-              <button
-                key={object.key}
-                type="button"
-                className={`hotspot${isOn(object) ? ' is-on' : ''}`}
-                style={{
-                  left: `${object.x}%`,
-                  top: `${object.y}%`,
-                  width: `${object.width}%`,
-                  height: `${object.height}%`,
-                }}
-                aria-label={object.label}
-                disabled={frozen}
-                onClick={() => handleClick(object)}
-              >
-                <span className="hotspot-label">{object.label}</span>
-              </button>
-            ))}
         </div>
       ))}
       <div className="dim" />
@@ -131,6 +150,8 @@ function LayerContent({ layer }) {
   if (anim.pivot) style.transformOrigin = `${anim.pivot.x}% ${anim.pivot.y}%`;
   if (anim.squash) style['--squash'] = anim.squash;
   if (anim.rest !== undefined) style['--rest'] = `${anim.rest}deg`;
+  if (anim.distance !== undefined) style['--distance'] = `${anim.distance}%`;
+  if (anim.amplitude !== undefined) style['--amp'] = `${anim.amplitude}deg`;
   if (anim.name === 'spin') {
     // The record turns inside a box that is squashed to match the view from above and in front.
     return (
