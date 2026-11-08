@@ -18,6 +18,13 @@ describe('moveItem', () => {
     expect(moveItem(scene, items, 'mug', { x: 150, y: 150 })[0]).toMatchObject({ x: 100, y: 100 });
   });
 
+  it('pushes the item out of a blocked box of the surface', () => {
+    const blocked = { ...scene, surfaces: scene.surfaces.map((surface) => ({ ...surface, blocked: [{ x: 10, y: 70, width: 20, height: 20 }] })) };
+    expect(moveItem(blocked, items, 'mug', { x: 28, y: 80 })[0]).toMatchObject({ x: 30, y: 80 });
+    expect(moveItem(blocked, items, 'mug', { x: 15, y: 72 })[0]).toMatchObject({ x: 15, y: 70 });
+    expect(moveItem(blocked, items, 'mug', { x: 50, y: 80 })[0]).toMatchObject({ x: 50, y: 80 });
+  });
+
   it('keeps positions to two decimals so saved rooms stay small', () => {
     expect(moveItem(scene, items, 'mug', { x: 20.123456, y: 90.987654 })[0]).toMatchObject({ x: 20.12, y: 90.99 });
   });

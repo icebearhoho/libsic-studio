@@ -9,10 +9,12 @@ import {
   setLastRoomCode,
   updateMyRoom,
 } from '../myRooms.js';
+import { MOVE_MIN_ZOOM } from './view.js';
 import SceneStage from '../scene/SceneStage.jsx';
 import { itemsEqual } from '../scene/itemsEdit.js';
 import { defaultSettings } from '../scene/sceneSettings.js';
 import CdSlot from './CdSlot.jsx';
+import Hologram from './Hologram.jsx';
 import Controls from './Controls.jsx';
 import DecorateHud from './DecorateHud.jsx';
 import DecorateOverlay from './DecorateOverlay.jsx';
@@ -206,7 +208,12 @@ export default function RoomScreen({ code }) {
   // The room fills the whole window and every control floats on top of it in a corner.
   return (
     <div ref={view.roomRef} className={`room${idle ? ' idle' : ''}`} style={{ '--zoom': view.zoom }} onWheel={view.onWheel}>
-      <SceneStage scene={scene} settings={settings} onSettingsChange={setSettings} items={items} frozen={decorating}>
+      <SceneStage scene={scene} settings={settings} onSettingsChange={setSettings} items={items} frozen={decorating} still={view.zoom < MOVE_MIN_ZOOM}>
+        {!decorating && (
+          <Hologram scene={scene}>
+            <CdSlot />
+          </Hologram>
+        )}
         {decorating && (
           <DecorateOverlay scene={scene} items={editor.items} selectedId={editor.selectedId} onSelect={editor.select} onMove={editor.move} />
         )}
@@ -258,9 +265,6 @@ export default function RoomScreen({ code }) {
             </div>
           </>
         )}
-        <div className="hud-br">
-          <CdSlot />
-        </div>
       </div>
     </div>
   );

@@ -86,17 +86,43 @@ export function itemBounds(scene, item) {
   return surface ? placeBox(entry.bounds, item, entry, surface) : null;
 }
 
-// The nearest point of the surface's area, so a dragged object cannot leave its surface.
-export function clampToSurface({ area }, { x, y }) {
-  return { x: clamp(x, area.x, area.x + area.width), y: clamp(y, area.y, area.y + area.height) };
+// A scene is 16:9, so one percent of its height is shorter on screen than one percent of its width.
+const HEIGHT_PER_WIDTH = 9 / 16;
+
+const insideBox = ({ x, y }, box) => x > box.x && x < box.x + box.width && y > box.y && y < box.y + box.height;
+
+// The nearest point of the surface's area, so a dragged object cannot leave its surface. A point inside one
+// of the surface's blocked boxes (a spot that is taken, like the clam) is pushed out to the nearest edge that
+// is still free. A surface without `blocked` only gets the clamp.
+export function clampToSurface({ area, blocked }, point) {
+  const inArea = (p) => ({ x: clamp(p.x, area.x, area.x + area.width), y: clamp(p.y, area.y, area.y + area.height) });
+  let spot = inArea(point);
+  const boxes = blocked || [];
+  for (let round = 0; round < boxes.length + 1; round++) {
+    const box = boxes.find((candidate) => insideBox(spot, candidate));
+    if (!box) return spot;
+    const edges = [
+      { x: box.x, y: spot.y },
+      { x: box.x + box.width, y: spot.y },
+      { x: spot.x, y: box.y },
+      { x: spot.x, y: box.y + box.height },
+    ].map(inArea);
+    const free = edges.filter((edge) => !boxes.some((candidate) => insideBox(edge, candidate)));
+    const from = spot;
+    const distance = (edge) => Math.abs(edge.x - from.x) + Math.abs(edge.y - from.y) * HEIGHT_PER_WIDTH;
+    spot = (free.length ? free : edges).reduce((best, edge) => (distance(edge) < distance(best) ? edge : best));
+  }
+  return spot;
 }
 
 // A new copy of an object, standing in the middle of its surface. Its id is the key, then key2, key3, ...
 export function newItem(scene, key, items) {
   const entry = entryOf(scene, key);
-  const { area } = surfaceOf(scene, entry);
+  const surface = surfaceOf(scene, entry);
+  const { area } = surface;
   const taken = new Set(items.map((item) => item.id));
   let id = key;
   for (let n = 2; taken.has(id); n++) id = `${key}${n}`;
-  return { id, key, x: area.x + area.width / 2, y: area.y + area.height / 2, scale: clamp(1, entry.scale.min, entry.scale.max), flip: false };
+  const { x, y } = clampToSurface(surface, { x: area.x + area.width / 2, y: area.y + area.height / 2 });
+  return { id, key, x, y, scale: clamp(1, entry.scale.min, entry.scale.max), flip: false };
 }

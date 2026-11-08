@@ -7,9 +7,13 @@ const { Schema } = mongoose;
 const boxPercent = { type: Number, required: true, min: 0, max: 100 };
 const boxSchema = new Schema({ x: boxPercent, y: boxPercent, width: boxPercent, height: boxPercent }, { _id: false });
 
+const scaleValue = { type: Number, required: true, min: 0.2, max: 3 };
+const glideCoord = { type: Number, required: true, min: -2000, max: 2000 };
+
 // A small movement for a layer. Which one is picked by name:
 //   spin (the record), tonearm, sway (leaves), steam, pulse (glows), breathe (a sleeping cat), drift (clouds),
-//   flick (a tail), billow (a curtain in the breeze)
+//   flick (a tail), billow (a curtain in the breeze), throb (a jellyfish bell squashing and stretching),
+//   sweep (a radar beam turning all the time)
 // pivot: the point it turns around, in percent of the layer's own picture.
 const animSchema = new Schema(
   {
@@ -22,6 +26,9 @@ const animSchema = new Schema(
     skew: { type: Number }, // clock: tilt in degrees
     distance: { type: Number, min: 0, max: 100 }, // drift: how far it travels, in percent of the layer's width
     amplitude: { type: Number, min: 0, max: 45 }, // sway, billow, flick: how far it swings, in degrees
+    // throb: the size it starts and ends at (1 = normal), around the pivot
+    scaleFrom: { type: new Schema({ x: scaleValue, y: scaleValue }, { _id: false }), default: undefined },
+    scaleTo: { type: new Schema({ x: scaleValue, y: scaleValue }, { _id: false }), default: undefined },
   },
   { _id: false }
 );
@@ -49,6 +56,24 @@ const layerSchema = new Schema(
     // The key of the catalog object this layer belongs to. Such a layer is a template: it is drawn once for
     // every copy of the object a room places, and not in its own place in the stack.
     item: { type: String, default: undefined },
+    // A straight, slow trip across the scene that repeats: a fish swimming by, a jellyfish drifting up. It starts at `from`,
+    // ends at `to` (both in percent of the layer's own width and height, and they may lie outside the layer), and fades in and
+    // out at the ends. `mirror` flips the picture (a fish drawn facing right that swims to the left). Works together with `anim`.
+    glide: {
+      type: new Schema(
+        {
+          from: new Schema({ x: glideCoord, y: glideCoord }, { _id: false }),
+          to: new Schema({ x: glideCoord, y: glideCoord }, { _id: false }),
+          duration: { type: Number, required: true, min: 1 },
+          delay: { type: Number },
+          mirror: { type: Boolean },
+          // true: instead of fading out and starting over, it drifts to `to` and back again, smoothly, and never fades (a jellyfish hanging in the water).
+          pingpong: { type: Boolean },
+        },
+        { _id: false }
+      ),
+      default: undefined,
+    },
     // true: only shown at night (when the lights are off), for example the night sky seen through a window.
     night: { type: Boolean, default: undefined },
     // The layer is a curtain: when the room's curtains are closed it is drawn this many times wider, growing out of
@@ -102,6 +127,7 @@ const surfaceSchema = new Schema(
   {
     key: { type: String, required: true },
     area: { type: boxSchema, required: true }, // where an object's contact point may be
+    blocked: { type: [boxSchema], default: [] }, // where a contact point may not be, e.g. a fixed object (the editor pushes a dragged object out; may reach past the area)
     drawAt: { type: Number, required: true, min: 0 }, // its objects are drawn just before this layer
     perspective: {
       type: new Schema({ farY: boxPercent, nearY: boxPercent, farScale: scale, nearScale: scale }, { _id: false }),
@@ -145,6 +171,9 @@ const sceneSchema = new Schema({
   // Effects (rain, snow...) are drawn on top of this layer and behind the ones after it.
   // For a window, that is the layer just behind the wall, so the rain only shows through the glass.
   effectLayer: { type: Number, min: 0, default: 0 },
+  // How dark the whole picture gets when the lights are off (0 to 1). Leave it out for the usual dimming;
+  // a scene whose night is painted in its own layers can set a small number.
+  nightDim: { type: Number, min: 0, max: 1 },
   surfaces: { type: [surfaceSchema], default: [] },
   catalog: { type: [catalogSchema], default: [] },
 });

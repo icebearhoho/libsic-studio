@@ -15,6 +15,7 @@ import './scene.css';
 //   playing          true while music plays: the record spins and the tonearm rests on it
 //   items            the objects a visitor placed (see placement.js); null shows the scene's default arrangement
 //   frozen           true while decorating: the layers stay still instead of following the mouse
+//   still            true when the whole picture is shown: the layers stay still, the mouse only moves them once zoomed in
 //   children         drawn on top of everything inside the stage (the decorate overlay)
 //
 // A layer is a picture with a few optional extras (all set in the scene data):
@@ -22,15 +23,16 @@ import './scene.css';
 //   blend   "screen" for glows, so they add light instead of covering what is below
 //   light   true for lamp light: it disappears when the lights are switched off
 //   night   true for a picture that only shows at night, when the lights are off (the night sky in a window)
+//   glide   a slow trip across the scene that repeats (a fish, a drifting jellyfish)
 //   curtain a curtain: it is drawn wider while settings.curtainsClosed is true
-//   anim    a small movement: spin, tonearm, sway, steam, pulse, breathe, drift, flick or billow
+//   anim    a small movement: spin, tonearm, sway, steam, pulse, breathe, drift, flick, billow, throb or sweep
 //   kind    "clock" draws the live clock instead of a picture
 //   tile    repeats a small picture over the layer (film grain)
 //   item    the layer belongs to an object a visitor can move: it is drawn once for each copy of that object
-export default function SceneStage({ scene, settings, onSettingsChange, onNextTrack, playing = true, items = null, frozen = false, children }) {
+export default function SceneStage({ scene, settings, onSettingsChange, onNextTrack, playing = true, items = null, frozen = false, still = false, children }) {
   const drawList = useMemo(() => buildDrawList(scene, items ?? defaultItems(scene)), [scene, items]);
   const depths = useMemo(() => drawList.map(({ layer }) => layer.depth), [drawList]);
-  const { stageRef, layerRef, handlers } = useParallax(depths, !frozen);
+  const { stageRef, layerRef, handlers } = useParallax(depths, !frozen && !still);
 
   function handleClick(object) {
     if (object.action.type === 'nextTrack') onNextTrack?.(object);
@@ -93,7 +95,11 @@ export default function SceneStage({ scene, settings, onSettingsChange, onNextTr
           data-night={layer.night ? 'true' : undefined}
           data-blend={layer.blend && layer.blend !== 'normal' ? layer.blend : undefined}
         >
-          {layer.curtain ? (
+          {layer.glide ? (
+            <div className={`glide${layer.glide.mirror ? ' glide-mirror' : ''}${layer.glide.pingpong ? ' glide-pingpong' : ''}`} style={glideStyle(layer.glide)}>
+              {content(layer, flip)}
+            </div>
+          ) : layer.curtain ? (
             <div className="curtain" style={{ transformOrigin: `${layer.curtain.origin}% 0%`, '--closed-scale': layer.curtain.scale }}>
               {content(layer, flip)}
               {hotspots(templateIndex)}
@@ -107,7 +113,7 @@ export default function SceneStage({ scene, settings, onSettingsChange, onNextTr
           )}
         </div>
       ))}
-      <div className="dim" />
+      <div className="dim" style={scene.nightDim != null ? { '--dim-alpha': scene.nightDim } : undefined} />
       {children}
     </div>
   );
@@ -127,6 +133,10 @@ export function layerStyle(box) {
     style.transformOrigin = `${((50 - x) / width) * 100}% ${((50 - y) / height) * 100}%`;
   }
   return style;
+}
+
+function glideStyle({ from, to, duration, delay }) {
+  return { '--fx': `${from.x}%`, '--fy': `${from.y}%`, '--tx': `${to.x}%`, '--ty': `${to.y}%`, '--dur': `${duration}s`, '--delay': `${delay ?? 0}s` };
 }
 
 function LayerContent({ layer }) {
@@ -152,6 +162,12 @@ function LayerContent({ layer }) {
   if (anim.rest !== undefined) style['--rest'] = `${anim.rest}deg`;
   if (anim.distance !== undefined) style['--distance'] = `${anim.distance}%`;
   if (anim.amplitude !== undefined) style['--amp'] = `${anim.amplitude}deg`;
+  if (anim.scaleFrom && anim.scaleTo) {
+    style['--sx0'] = anim.scaleFrom.x;
+    style['--sy0'] = anim.scaleFrom.y;
+    style['--sx1'] = anim.scaleTo.x;
+    style['--sy1'] = anim.scaleTo.y;
+  }
   if (anim.name === 'spin') {
     // The record turns inside a box that is squashed to match the view from above and in front.
     return (

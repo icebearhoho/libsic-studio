@@ -165,6 +165,53 @@ describe('clampToSurface', () => {
   });
 });
 
+describe('clampToSurface with blocked boxes', () => {
+  const blockedDesk = { ...desk, blocked: [{ x: 40, y: 70, width: 20, height: 20 }] }; // x 40..60, y 70..90
+
+  it('does not change a surface without blocked boxes', () => {
+    expect(clampToSurface(desk, { x: 50, y: 80 })).toEqual({ x: 50, y: 80 });
+    expect(clampToSurface({ ...desk, blocked: [] }, { x: 50, y: 80 })).toEqual({ x: 50, y: 80 });
+  });
+
+  it('leaves points outside the boxes and on their edge alone', () => {
+    expect(clampToSurface(blockedDesk, { x: 30, y: 80 })).toEqual({ x: 30, y: 80 });
+    expect(clampToSurface(blockedDesk, { x: 40, y: 80 })).toEqual({ x: 40, y: 80 });
+    expect(clampToSurface(blockedDesk, { x: 50, y: 90 })).toEqual({ x: 50, y: 90 });
+  });
+
+  it('pushes a point inside a box to the nearest edge', () => {
+    expect(clampToSurface(blockedDesk, { x: 43, y: 80 })).toEqual({ x: 40, y: 80 }); // left
+    expect(clampToSurface(blockedDesk, { x: 58, y: 80 })).toEqual({ x: 60, y: 80 }); // right
+    expect(clampToSurface(blockedDesk, { x: 50, y: 72 })).toEqual({ x: 50, y: 70 }); // top
+    expect(clampToSurface(blockedDesk, { x: 50, y: 88 })).toEqual({ x: 50, y: 90 }); // bottom
+  });
+
+  it('measures the way out on screen, where a percent of the height is shorter than one of the width', () => {
+    expect(clampToSurface(blockedDesk, { x: 44.8, y: 85 })).toEqual({ x: 44.8, y: 90 }); // 5 percent down is nearer than 4.8 percent left
+  });
+
+  it('uses another edge when the nearest one is outside the area', () => {
+    const edgeDesk = { ...desk, area: { x: 10, y: 60, width: 90, height: 40 }, blocked: [{ x: 0, y: 60, width: 20, height: 40 }] };
+    expect(clampToSurface(edgeDesk, { x: 12, y: 80 })).toEqual({ x: 20, y: 80 }); // the left edge (x 0) is off the surface
+  });
+
+  it('does not end up inside a second box next to the first', () => {
+    const two = { ...desk, blocked: [{ x: 40, y: 70, width: 20, height: 20 }, { x: 25, y: 70, width: 15, height: 20 }] }; // x 25..40 and 40..60
+    const spot = clampToSurface(two, { x: 45, y: 80 });
+    expect(two.blocked.some((box) => spot.x > box.x && spot.x < box.x + box.width && spot.y > box.y && spot.y < box.y + box.height)).toBe(false);
+  });
+
+  it('still keeps the point inside the area', () => {
+    expect(clampToSurface(blockedDesk, { x: 200, y: 200 })).toEqual({ x: 100, y: 100 });
+  });
+
+  it('puts a new object beside a blocked middle of the surface', () => {
+    const middle = { ...scene, surfaces: [{ ...desk, blocked: [{ x: 30, y: 70, width: 40, height: 20 }] }, glass] };
+    const made = newItem(middle, 'mug', []);
+    expect(made.x > 30 && made.x < 70 && made.y > 70 && made.y < 90).toBe(false);
+  });
+});
+
 describe('newItem', () => {
   it('stands in the middle of the surface at scale 1', () => {
     expect(newItem(scene, 'star', [])).toEqual({ id: 'star', key: 'star', x: 50, y: 25, scale: 1, flip: false });
