@@ -68,6 +68,47 @@ describe.each(scenes.map((s) => [s.slug, s]))('%s catalog', (slug, scene) => {
       expect(entry.home.y).toBeLessThanOrEqual(area.y + area.height);
     });
   });
+
+  it('keeps the starting objects out of the blocked boxes of their surface', () => {
+    (scene.surfaces || []).forEach((surface) => {
+      (surface.blocked || []).forEach((box) => {
+        catalog
+          .filter((entry) => entry.surface === surface.key && entry.inDefault)
+          .forEach(({ home }) => expect(home.x > box.x && home.x < box.x + box.width && home.y > box.y && home.y < box.y + box.height).toBe(false));
+      });
+    });
+  });
+});
+
+describe('underwater-nook decorating', () => {
+  const scene = scenes.find((s) => s.slug === 'underwater-nook');
+  const layerIndex = (name) => scene.layers.findIndex((l) => l.name === name);
+
+  it('has a seabed that keeps objects off the clam and open water for floating ones', () => {
+    expect(scene.surfaces.map((s) => s.key)).toEqual(['seabed', 'water']);
+    const seabed = scene.surfaces.find((s) => s.key === 'seabed');
+    expect(seabed.blocked.length).toBeGreaterThanOrEqual(1);
+    // the clam reaches past the left and top edge of the seabed, so the box does too: the nearest way out is to the right or in front
+    const clam = scene.layers[layerIndex('clam lower shell')].box;
+    const box = seabed.blocked[0];
+    expect(box.x).toBeLessThanOrEqual(seabed.area.x);
+    expect(box.y).toBeLessThanOrEqual(seabed.area.y);
+    expect(box.x + box.width).toBeGreaterThanOrEqual(clam.x + clam.width);
+    expect(box.y + box.height).toBeGreaterThanOrEqual(clam.y + clam.height);
+  });
+
+  it('lets people add jellyfish, seahorses and fish in the water and shells and plants on the seabed', () => {
+    const surfaceOf = (key) => scene.catalog.find((e) => e.key === key).surface;
+    ['jelly', 'seahorse', 'fish'].forEach((key) => expect(surfaceOf(key)).toBe('water'));
+    ['starfish', 'conch', 'scallop', 'urchin', 'coral', 'anemone', 'seagrass', 'rocks'].forEach((key) => expect(surfaceOf(key)).toBe('seabed'));
+    scene.catalog.forEach((e) => expect(e.inDefault).toBe(false));
+  });
+
+  it('keeps every shadow of an object on the same side when it is flipped and hides it at night', () => {
+    const shadows = scene.layers.filter((l) => l.item && /shadow$/.test(l.name));
+    expect(shadows.length).toBeGreaterThanOrEqual(8);
+    shadows.forEach((layer) => { expect(layer.mirror).toBe(false); expect(layer.light).toBe(true); });
+  });
 });
 
 describe('night-study customization', () => {
