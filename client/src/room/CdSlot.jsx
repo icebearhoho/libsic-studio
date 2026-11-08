@@ -1,4 +1,4 @@
-// A stand-in for the retro CD player. The real player (tracks, CDs, play and pause) is the music side of the
+// A stand-in for the retro CD player, shown as a hologram (see Hologram.jsx and the .cd-* rules in styles.css). The real player (tracks, CDs, play and pause) is the music side of the
 // project; until it is connected this only shows where it will sit and that nothing is playing yet.
 export default function CdSlot() {
   return (

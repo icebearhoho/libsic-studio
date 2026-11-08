@@ -540,6 +540,15 @@ describe('decorating the room', () => {
       await waitFor(() => expect(panX(container)).not.toBe('0px'));
     });
 
+    it('stays still at the starting zoom', async () => {
+      const { container } = renderAt('/new');
+      await screen.findByTestId('stage');
+      lookLeft(); // the starting zoom is below the one at which the mouse moves the picture
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(['', '0px']).toContain(panX(container)); // never set, or set to the middle
+    });
+
     it('stays still while decorating', async () => {
       const { container } = renderAt('/new');
       await screen.findByTestId('stage');

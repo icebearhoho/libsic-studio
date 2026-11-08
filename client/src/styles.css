@@ -272,50 +272,290 @@ a.chip { text-decoration: none; display: inline-block; }
 .item-toolbar label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 13px; }
 .item-toolbar input[type='range'] { width: 100%; accent-color: var(--accent); }
 
-/* CD player stand-in (the real one comes from the music side). A slim bar that can grow into a bigger player. */
+/* The music player as a hologram floating above the player object in the scene (see Hologram.jsx).
+   Everything is sized in em, and the font size follows the picture width, so it scales with the zoom. */
+.holo {
+  --h: var(--holo-h, 188);
+  --holo-line: hsl(var(--h) 100% 72% / 0.6);
+  --holo-soft: hsl(var(--h) 100% 70% / 0.14);
+  --holo-glow: hsl(var(--h) 100% 65% / 0.45);
+  --holo-text: hsl(var(--h) 100% 86%);
+  position: absolute;
+  left: var(--hx);
+  top: var(--hy);
+  z-index: 6;
+  width: 32em;
+  font-size: clamp(7px, calc(var(--stage-w) * 0.0086), 17px);
+  transform: translate(-50%, calc(-100% - 3.4em));
+  pointer-events: none;
+}
+.holo-panel {
+  position: relative;
+  padding: 1em 1.1em;
+  border: 1px solid var(--holo-line);
+  border-radius: 0.9em;
+  background:
+    linear-gradient(180deg, hsl(var(--h) 100% 70% / 0.26), hsl(var(--h) 100% 55% / 0.1) 70%),
+    hsl(var(--h) 70% 9% / 0.58);
+  box-shadow: 0 0 2.4em var(--holo-glow), inset 0 0 1.6em var(--holo-soft);
+  backdrop-filter: blur(1.5px) saturate(1.2);
+  color: var(--holo-text);
+  animation: holo-float 7s ease-in-out infinite, holo-flicker 5.3s steps(1) infinite;
+  pointer-events: auto;
+}
+/* fine scan lines that drift upward, like a projected picture */
+.holo-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: repeating-linear-gradient(0deg, hsl(var(--h) 100% 80% / 0.1) 0 1px, transparent 1px 0.3em);
+  background-size: 100% 0.9em;
+  animation: holo-scan 3s linear infinite;
+  pointer-events: none;
+}
+/* bright corner marks */
+.holo-panel::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background:
+    linear-gradient(var(--holo-text), var(--holo-text)) top left / 1.4em 2px no-repeat,
+    linear-gradient(var(--holo-text), var(--holo-text)) top left / 2px 1.4em no-repeat,
+    linear-gradient(var(--holo-text), var(--holo-text)) top right / 1.4em 2px no-repeat,
+    linear-gradient(var(--holo-text), var(--holo-text)) top right / 2px 1.4em no-repeat,
+    linear-gradient(var(--holo-text), var(--holo-text)) bottom left / 1.4em 2px no-repeat,
+    linear-gradient(var(--holo-text), var(--holo-text)) bottom left / 2px 1.4em no-repeat,
+    linear-gradient(var(--holo-text), var(--holo-text)) bottom right / 1.4em 2px no-repeat,
+    linear-gradient(var(--holo-text), var(--holo-text)) bottom right / 2px 1.4em no-repeat;
+  filter: drop-shadow(0 0 0.3em var(--holo-glow));
+  pointer-events: none;
+}
+/* the light beam from the player up to the panel, and the glowing ring where it starts */
+.holo-beam {
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 17em;
+  height: 3.4em;
+  transform: translateX(-50%);
+  clip-path: polygon(0 0, 100% 0, 62% 100%, 38% 100%);
+  background: linear-gradient(180deg, hsl(var(--h) 100% 70% / 0.5), hsl(var(--h) 100% 70% / 0.08));
+  animation: holo-beam 4.2s ease-in-out infinite;
+}
+.holo-emitter {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 3.1em);
+  width: 6em;
+  height: 1.3em;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  border: 1px solid var(--holo-line);
+  background: radial-gradient(ellipse, hsl(var(--h) 100% 80% / 0.6), transparent 70%);
+  box-shadow: 0 0 1.2em var(--holo-glow);
+}
+
 .cd-slot {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 9px 14px;
-  border: 1px solid rgba(232, 184, 106, 0.3);
-  border-radius: 16px;
-  background: linear-gradient(180deg, rgba(60, 44, 30, 0.82), rgba(26, 20, 16, 0.9));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 10px 30px rgba(0, 0, 0, 0.45);
+  gap: 0.8em;
 }
 .cd-disc {
   flex: none;
-  width: 40px;
-  height: 40px;
+  width: 3.3em;
+  height: 3.3em;
   border-radius: 50%;
   background:
-    radial-gradient(circle, #0a0b10 0 12%, #c8cfd8 13% 22%, transparent 23%),
-    conic-gradient(from 20deg, #8fa7b5, #e6dcc8, #7d8fb0, #d9b3c4, #8fa7b5);
-  opacity: 0.8;
+    radial-gradient(circle, transparent 0 11%, var(--holo-line) 12% 14%, transparent 15% 34%, hsl(var(--h) 100% 80% / 0.35) 35% 36%, transparent 37% 60%, hsl(var(--h) 100% 80% / 0.3) 61% 62%, transparent 63%),
+    conic-gradient(from 20deg, hsl(var(--h) 100% 70% / 0.55), hsl(var(--h) 100% 90% / 0.1), hsl(var(--h) 100% 70% / 0.5), hsl(var(--h) 100% 90% / 0.1), hsl(var(--h) 100% 70% / 0.55));
+  border: 1px solid var(--holo-line);
+  box-shadow: 0 0 0.9em var(--holo-glow);
+  animation: holo-spin 9s linear infinite;
 }
 .cd-display {
   flex: 1;
+  min-width: 0;
   display: flex;
   justify-content: space-between;
-  gap: 12px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  background: #0b0d08;
-  color: #e8b86a;
-  font: 600 12px/1 ui-monospace, 'SFMono-Regular', Menlo, monospace;
-  letter-spacing: 0.12em;
-  text-shadow: 0 0 6px rgba(232, 184, 106, 0.6);
+  gap: 1em;
+  padding: 0.55em 0.6em;
+  border-bottom: 1px solid var(--holo-line);
+  color: var(--holo-text);
+  font: 600 1.15em/1 ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  letter-spacing: 0.14em;
+  white-space: nowrap;
+  text-shadow: 0 0 0.5em var(--holo-glow), 0 0 0.12em var(--holo-text);
 }
-.cd-buttons { display: flex; gap: 6px; }
+.cd-buttons { display: flex; gap: 0.5em; }
 .cd-btn {
-  padding: 5px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text);
-  font-size: 13px;
+  padding: 0.45em 0.8em;
+  border: 1px solid var(--holo-line);
+  border-radius: 0.45em;
+  background: var(--holo-soft);
+  color: var(--holo-text);
+  font-size: 1.1em;
+  text-shadow: 0 0 0.4em var(--holo-glow);
 }
-.cd-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.cd-btn:not(:disabled):hover { box-shadow: 0 0 0.9em var(--holo-glow); background: hsl(var(--h) 100% 70% / 0.28); }
+.cd-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Each room dresses the hologram in its own material. The base rules above are the plain cyan version. */
+
+/* Room 1, the rainy night study: frosted window glass lit from below by the lamp, with raindrops running down it,
+   soft city-light bokeh behind the writing, and the writing glowing like the clock's LEDs. */
+.holo-night-study {
+  --holo-line: hsl(34 95% 62% / 0.7);
+  --holo-soft: hsl(34 100% 60% / 0.12);
+  --holo-glow: hsl(30 100% 55% / 0.4);
+  --holo-text: hsl(36 100% 78%);
+}
+.holo-night-study .holo-panel {
+  border: 1px solid transparent;
+  border-radius: 0.7em;
+  background:
+    linear-gradient(0deg, hsl(32 100% 55% / 0.24), transparent 55%) padding-box,
+    linear-gradient(180deg, hsl(222 45% 16% / 0.55), hsl(226 45% 8% / 0.68)) padding-box,
+    linear-gradient(180deg, hsl(212 75% 72% / 0.55), hsl(34 95% 62% / 0.85)) border-box;
+  backdrop-filter: blur(2.5px) saturate(1.3);
+  box-shadow: 0 0 2.2em hsl(30 100% 55% / 0.35), inset 0 -1.2em 1.6em -0.8em hsl(32 100% 60% / 0.3);
+}
+/* raindrops: thin streaks and a few round drops that slide down the glass */
+.holo-night-study .holo-panel::before {
+  background:
+    radial-gradient(circle at 14% 22%, hsl(205 90% 90% / 0.55) 0 0.14em, transparent 0.24em),
+    radial-gradient(circle at 41% 63%, hsl(205 90% 90% / 0.5) 0 0.12em, transparent 0.22em),
+    radial-gradient(circle at 78% 35%, hsl(205 90% 90% / 0.55) 0 0.15em, transparent 0.25em),
+    radial-gradient(circle at 92% 78%, hsl(205 90% 90% / 0.45) 0 0.11em, transparent 0.2em),
+    repeating-linear-gradient(97deg, transparent 0 1.7em, hsl(205 80% 88% / 0.12) 1.7em calc(1.7em + 1px), transparent calc(1.7em + 1px) 3.4em);
+  background-size: 100% 200%, 100% 200%, 100% 200%, 100% 200%, 100% 7em;
+  animation: holo-drops 9s linear infinite;
+}
+/* blurred city lights behind the writing */
+.holo-night-study .holo-panel::after {
+  inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 8% 30%, hsl(34 100% 65% / 0.45) 0 0.7em, transparent 0.9em),
+    radial-gradient(circle at 30% 80%, hsl(330 90% 70% / 0.32) 0 0.6em, transparent 0.8em),
+    radial-gradient(circle at 62% 22%, hsl(190 90% 70% / 0.3) 0 0.55em, transparent 0.75em),
+    radial-gradient(circle at 90% 70%, hsl(40 100% 65% / 0.4) 0 0.75em, transparent 0.95em);
+  filter: blur(0.35em);
+  opacity: 0.85;
+}
+.holo-night-study .cd-display {
+  color: hsl(30 100% 62%);
+  letter-spacing: 0.2em;
+  text-shadow: 0 0 0.4em hsl(24 100% 55% / 0.95), 0 0 1em hsl(24 100% 50% / 0.55);
+  border-bottom-color: hsl(30 100% 60% / 0.55);
+}
+.holo-night-study .cd-btn { border-color: hsl(34 90% 60% / 0.5); background: hsl(222 40% 14% / 0.55); color: hsl(36 100% 80%); }
+.holo-night-study .cd-disc {
+  background:
+    radial-gradient(circle, hsl(30 95% 60% / 0.95) 0 16%, hsl(24 40% 6%) 17% 19%, transparent 20%),
+    repeating-radial-gradient(circle, hsl(24 30% 8%) 0 2px, hsl(30 25% 16%) 2px 3px);
+  border-color: hsl(30 60% 40% / 0.6);
+}
+.holo-night-study .holo-beam {
+  background: linear-gradient(180deg, hsl(32 100% 70% / 0.42), hsl(32 100% 60% / 0.04));
+}
+.holo-night-study .holo-emitter {
+  background: radial-gradient(ellipse, hsl(34 100% 75% / 0.7), transparent 70%);
+}
+
+/* Room 2, the golden hour loft: a sunlit card, warm cream glass with brown ink and gold dust in the beam. */
+.holo-golden-loft {
+  --holo-line: hsl(38 85% 48% / 0.85);
+  --holo-soft: hsl(40 100% 70% / 0.25);
+  --holo-glow: hsl(40 100% 62% / 0.6);
+  --holo-text: #5a3912;
+}
+.holo-golden-loft .holo-panel {
+  border-radius: 1em;
+  background: linear-gradient(180deg, hsl(48 100% 96% / 0.9), hsl(38 90% 82% / 0.82));
+  backdrop-filter: blur(2px);
+  box-shadow: 0 0 2.6em hsl(42 100% 62% / 0.65), inset 0 0 1.4em hsl(45 100% 98% / 0.7);
+}
+.holo-golden-loft .holo-panel::before {
+  background:
+    radial-gradient(circle at 12% 30%, hsl(45 100% 98% / 0.9) 0 0.12em, transparent 0.2em),
+    radial-gradient(circle at 48% 72%, hsl(45 100% 98% / 0.8) 0 0.1em, transparent 0.18em),
+    radial-gradient(circle at 83% 22%, hsl(45 100% 98% / 0.9) 0 0.12em, transparent 0.2em),
+    radial-gradient(circle at 66% 62%, hsl(45 100% 98% / 0.7) 0 0.1em, transparent 0.18em);
+  animation: holo-twinkle 4s ease-in-out infinite;
+}
+.holo-golden-loft .holo-panel::after { opacity: 0.55; }
+.holo-golden-loft .cd-display { text-shadow: 0 0 0.35em hsl(45 100% 95% / 0.9); }
+.holo-golden-loft .cd-btn { background: hsl(45 100% 97% / 0.6); }
+.holo-golden-loft .cd-disc {
+  background:
+    radial-gradient(circle, #fff6dc 0 11%, hsl(38 80% 50%) 12% 14%, transparent 15%),
+    conic-gradient(from 20deg, #ffe7a8, #fff6dc, #f3c36b, #fff0c4, #ffe7a8);
+}
+.holo-golden-loft .holo-beam {
+  background: linear-gradient(180deg, hsl(44 100% 78% / 0.7), hsl(44 100% 80% / 0.08));
+}
+
+/* Room 3, the clam cove: a bioluminescent bubble with a pearly rim, and bubbles rising up the beam from the clam. */
+.holo-underwater-nook {
+  --holo-line: hsl(176 100% 78% / 0.55);
+  --holo-soft: hsl(176 100% 70% / 0.14);
+  --holo-glow: hsl(176 100% 60% / 0.5);
+  --holo-text: hsl(176 100% 90%);
+}
+.holo-underwater-nook .holo-panel {
+  border: 1px solid transparent;
+  border-radius: 2em;
+  background:
+    radial-gradient(ellipse at 30% 0%, hsl(176 100% 80% / 0.28), transparent 60%) padding-box,
+    linear-gradient(180deg, hsl(186 80% 30% / 0.5), hsl(210 80% 14% / 0.62)) padding-box,
+    conic-gradient(from 30deg, #a8fff2, #ffc4ea, #fff3b0, #a8d4ff, #a8fff2) border-box;
+  box-shadow: 0 0 2.4em hsl(176 100% 55% / 0.45), inset 0 0 1.6em hsl(176 100% 80% / 0.14);
+}
+.holo-underwater-nook .holo-panel::before {
+  background:
+    radial-gradient(circle at 10% 70%, hsl(176 100% 92% / 0.5) 0 0.18em, transparent 0.26em),
+    radial-gradient(circle at 36% 30%, hsl(176 100% 92% / 0.4) 0 0.12em, transparent 0.2em),
+    radial-gradient(circle at 74% 78%, hsl(176 100% 92% / 0.45) 0 0.16em, transparent 0.24em),
+    radial-gradient(circle at 90% 25%, hsl(176 100% 92% / 0.4) 0 0.12em, transparent 0.2em);
+  background-size: 100% 200%;
+  animation: holo-bubbles 6s linear infinite;
+}
+.holo-underwater-nook .holo-panel::after { display: none; }
+.holo-underwater-nook .cd-disc {
+  background:
+    radial-gradient(circle, transparent 0 14%, hsl(176 100% 90% / 0.6) 15% 17%, transparent 18%),
+    radial-gradient(circle at 35% 30%, #fff 0 8%, transparent 30%),
+    conic-gradient(from 0deg, #a8fff2, #ffc4ea, #fff3b0, #a8d4ff, #a8fff2);
+  opacity: 0.9;
+}
+.holo-underwater-nook .holo-beam {
+  background:
+    radial-gradient(circle at 40% 80%, hsl(176 100% 92% / 0.9) 0 0.15em, transparent 0.25em),
+    radial-gradient(circle at 62% 45%, hsl(176 100% 92% / 0.8) 0 0.12em, transparent 0.22em),
+    radial-gradient(circle at 50% 15%, hsl(176 100% 92% / 0.8) 0 0.18em, transparent 0.28em),
+    linear-gradient(180deg, hsl(176 100% 70% / 0.3), hsl(176 100% 70% / 0.03));
+  background-size: 100% 200%, 100% 200%, 100% 200%, 100% 100%;
+  animation: holo-bubbles 5s linear infinite;
+}
+.holo-underwater-nook .holo-emitter {
+  background: radial-gradient(ellipse, hsl(176 100% 90% / 0.8), hsl(176 100% 70% / 0.2) 60%, transparent 75%);
+}
+
+@keyframes holo-drops { to { background-position-y: 100%, 100%, 100%, 100%, 7em; } }
+@keyframes holo-twinkle { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+@keyframes holo-bubbles { to { background-position-y: -100%, -100%, -100%, 0; } }
+
+@keyframes holo-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -0.35em; } }
+@keyframes holo-scan { to { background-position: 0 -0.9em; } }
+@keyframes holo-beam { 0%, 100% { opacity: 0.75; } 50% { opacity: 1; } }
+@keyframes holo-spin { to { transform: rotate(360deg); } }
+/* a rare, tiny flicker */
+@keyframes holo-flicker { 0%, 93%, 96%, 100% { opacity: 1; } 94% { opacity: 0.82; } 95% { opacity: 0.94; } }
+@media (prefers-reduced-motion: reduce) {
+  .holo-panel, .holo-panel::before, .holo-beam, .cd-disc { animation: none !important; }
+}
 
 .savebar {
   display: flex;

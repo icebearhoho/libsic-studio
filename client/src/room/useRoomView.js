@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { clampZoom, MIN_ZOOM, panOffset, startZoom, ZOOM_STEP } from './view.js';
+import { clampZoom, MIN_ZOOM, MOVE_MIN_ZOOM, panOffset, startZoom, ZOOM_STEP } from './view.js';
 
 const STORAGE_KEY = 'libsic.zoom';
 
@@ -60,7 +60,7 @@ export function useRoomView({ panning = true } = {}) {
       room.style.setProperty('--pan-y', `${y}px`);
     };
     shift({ x: 0.5, y: 0.5 });
-    if (!panning) return undefined;
+    if (!panning || zoom < MOVE_MIN_ZOOM) return undefined;
     const onMove = (e) => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => shift({ x: e.clientX / size.width, y: e.clientY / size.height }));

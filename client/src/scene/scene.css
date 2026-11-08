@@ -184,6 +184,51 @@
   50% { opacity: 1; }
 }
 
+/* Bubbles rise through the water, wobble a little from side to side and fade away near the top. */
+.effect-bubbles i {
+  left: var(--x);
+  top: 0;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.9) 0 10%, rgba(200, 240, 245, 0.18) 38%, rgba(190, 235, 240, 0.06) 64%, rgba(225, 250, 255, 0.55) 98%);
+  opacity: 0;
+  will-change: transform, opacity;
+  animation:
+    bubble-rise var(--dur) ease-in var(--delay) infinite,
+    bubble-wobble var(--wobdur) ease-in-out var(--delay) infinite alternate;
+}
+@keyframes bubble-rise {
+  0% { transform: translate3d(0, 108cqh, 0); opacity: 0; }
+  10% { opacity: 0.9; }
+  85% { opacity: 0.8; }
+  100% { transform: translate3d(0, -12cqh, 0); opacity: 0; }
+}
+@keyframes bubble-wobble {
+  from { translate: 0 0; }
+  to { translate: var(--wob) 0; }
+}
+
+/* Glowing plankton: soft cyan specks that drift and fade in and out. */
+.effect-plankton i {
+  left: var(--x);
+  top: var(--y);
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(210, 255, 250, 1) 0 30%, rgba(110, 230, 225, 0.45) 55%, rgba(110, 230, 225, 0) 100%);
+  transform: scale(3);
+  opacity: 0;
+  will-change: transform, opacity;
+  animation:
+    plankton-drift var(--dur) ease-in-out var(--delay) infinite alternate,
+    dust-fade var(--blink) ease-in-out var(--delay) infinite;
+}
+@keyframes plankton-drift {
+  from { transform: translate3d(0, 0, 0) scale(3); }
+  to { transform: translate3d(var(--dx), var(--dy), 0) scale(3); }
+}
+
 /* Stars */
 .effect-stars i {
   left: var(--x);
@@ -212,6 +257,10 @@
 /* Glows add light to what is below them. */
 .layer[data-blend='screen'] {
   mix-blend-mode: screen;
+}
+/* Shading darkens what is below it and keeps its colour (the room at night). */
+.layer[data-blend='multiply'] {
+  mix-blend-mode: multiply;
 }
 /* Lamp light and its glow switch off with the lamp. */
 .layer {
@@ -246,7 +295,7 @@
 
 /* A scene with real lamp layers only gets a gentle dark layer, so the city outside stays lit. */
 .stage.has-lights.lights-off .dim {
-  background: rgba(4, 8, 22, 0.4);
+  background: rgba(4, 8, 22, var(--dim-alpha, 0.4));
 }
 
 .anim,
@@ -273,6 +322,11 @@
 }
 .stage.paused .anim-spin .spin {
   animation-play-state: paused;
+}
+/* A radar sweep turns all the time, also when the music is paused. */
+.anim-sweep {
+  animation: spin var(--dur) linear infinite;
+  will-change: transform;
 }
 
 /* The tonearm rests on the record while music plays and lifts away when it stops. */
@@ -317,6 +371,7 @@
 .anim-drift,
 .anim-flick,
 .anim-billow,
+.anim-throb,
 .anim-sway,
 .anim-pulse,
 .anim-steam {
@@ -339,6 +394,41 @@
 @keyframes drift {
   from { transform: translate3d(0, 0, 0); }
   to { transform: translate3d(calc(var(--distance, 4%) * -1), 0, 0); }
+}
+
+/* A slow trip across the scene (a fish swimming by, a jellyfish drifting up): fades in, glides in a straight line, fades out. */
+.glide {
+  width: 100%;
+  height: 100%;
+  animation: glide var(--dur) linear var(--delay) infinite;
+  will-change: transform, opacity;
+}
+@keyframes glide {
+  0% { transform: translate3d(var(--fx), var(--fy), 0); opacity: 0; }
+  7% { opacity: 1; }
+  93% { opacity: 1; }
+  100% { transform: translate3d(var(--tx), var(--ty), 0); opacity: 0; }
+}
+.glide-pingpong {
+  animation-name: glide-pingpong;
+  animation-timing-function: ease-in-out;
+  animation-direction: alternate;
+}
+@keyframes glide-pingpong {
+  from { transform: translate3d(var(--fx), var(--fy), 0); }
+  to { transform: translate3d(var(--tx), var(--ty), 0); }
+}
+.glide-mirror img {
+  transform: scaleX(-1);
+}
+
+/* A jellyfish bell squashes and stretches. */
+.anim-throb {
+  animation: throb var(--dur) ease-in-out var(--delay) infinite alternate;
+}
+@keyframes throb {
+  from { transform: scale(var(--sx0, 1), var(--sy0, 1)); }
+  to { transform: scale(var(--sx1, 1), var(--sy1, 1)); }
 }
 
 /* A tail rests, then flicks once in a while. */
@@ -403,8 +493,11 @@
   .anim-drift,
   .anim-flick,
   .anim-billow,
+  .anim-throb,
+  .anim-sweep,
   .anim-spin .spin,
   .clock-face .colon { animation: none; }
   .layer { transition: opacity 0.6s ease; }
   .curtain { transition: none; }
+  .glide { animation: none; }
 }

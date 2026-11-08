@@ -111,6 +111,39 @@ describe('Scene model', () => {
     expect((await validationErrors(new Scene(data)))['layers.0.curtain.scale']).toBeDefined();
   });
 
+  it('accepts a multiply layer and a nightDim between 0 and 1, and rejects one above 1', async () => {
+    const data = validScene();
+    data.layers[0].blend = 'multiply';
+    data.nightDim = 0;
+    expect(await validationErrors(new Scene(data))).toEqual({});
+    data.nightDim = 1.5;
+    expect((await validationErrors(new Scene(data)))['nightDim']).toBeDefined();
+  });
+
+  it('accepts the sweep movement (a radar beam)', async () => {
+    const data = validScene();
+    data.layers[0].anim = { name: 'sweep', duration: 10 };
+    expect(await validationErrors(new Scene(data))).toEqual({});
+  });
+
+  it('accepts a glide and a throb, and rejects a glide with a missing end', async () => {
+    const data = validScene();
+    data.layers[0].glide = { from: { x: -150, y: 0 }, to: { x: 900, y: -40 }, duration: 40, mirror: true };
+    data.layers[0].anim = { name: 'throb', scaleFrom: { x: 1.05, y: 0.9 }, scaleTo: { x: 0.97, y: 1.06 }, duration: 4 };
+    expect(await validationErrors(new Scene(data))).toEqual({});
+    data.layers[0].glide = { from: { x: -150 }, to: { x: 900, y: -40 }, duration: 40 };
+    expect((await validationErrors(new Scene(data)))['layers.0.glide.from.y']).toBeDefined();
+    data.layers[0].glide = { from: { x: 0, y: 10 }, to: { x: 4, y: -90 }, duration: 70, pingpong: true };
+    expect(await validationErrors(new Scene(data))).toEqual({});
+  });
+
+  it('accepts the water effects', async () => {
+    const data = validScene();
+    data.effects = ['bubbles', 'plankton'];
+    data.defaultEffect = 'bubbles';
+    expect(await validationErrors(new Scene(data))).toEqual({});
+  });
+
   it('rejects a drift that travels further than the layer is wide', async () => {
       const data = validScene();
       data.layers[0].anim = { name: 'drift', distance: 400 };
@@ -132,7 +165,7 @@ describe('Scene model', () => {
     it('rejects an unknown animation, an unknown blend and a box outside the scene', async () => {
       const data = validScene();
       data.layers[0].anim = { name: 'explode' };
-      data.layers[0].blend = 'multiply';
+      data.layers[0].blend = 'overlay';
       data.layers[0].box = { x: 10, y: 10, width: 120, height: 5 };
       const errors = await validationErrors(new Scene(data));
       expect(errors['layers.0.anim.name']).toBeDefined();
@@ -227,6 +260,26 @@ describe('Scene catalog and surfaces', () => {
     expect((await validationErrors(new Scene(data))).catalog).toBeDefined();
     data.catalog[0].scale = { min: 0, max: 1 };
     expect((await validationErrors(new Scene(data)))['catalog.0.scale.min']).toBeDefined();
+  });
+
+  it('has no blocked boxes on a surface by default', () => {
+    expect(new Scene(sceneWithCatalog()).surfaces[0].blocked).toHaveLength(0);
+  });
+
+  it('accepts blocked boxes on a surface and keeps them', async () => {
+    const data = sceneWithCatalog();
+    data.surfaces[0].blocked = [{ x: 40, y: 80, width: 20, height: 10 }];
+    const scene = new Scene(data);
+    expect(await validationErrors(scene)).toEqual({});
+    expect(scene.toObject().surfaces[0].blocked).toEqual([{ x: 40, y: 80, width: 20, height: 10 }]);
+  });
+
+  it('rejects a blocked box that is outside 0 to 100 percent or misses a side', async () => {
+    const data = sceneWithCatalog();
+    data.surfaces[0].blocked = [{ x: 40, y: 80, width: 120, height: 10 }, { x: 1, y: 2, width: 3 }];
+    const errors = await validationErrors(new Scene(data));
+    expect(errors['surfaces.0.blocked.0.width']).toBeDefined();
+    expect(errors['surfaces.0.blocked.1.height']).toBeDefined();
   });
 
   it('rejects a perspective with a scale of 0 or less', async () => {

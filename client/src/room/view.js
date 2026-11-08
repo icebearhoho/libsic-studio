@@ -1,6 +1,8 @@
 // How close the room is shown. Zoom 1 shows the whole picture; bigger numbers move in.
 export const MIN_ZOOM = 1;
 export const MAX_ZOOM = 2.4;
+// Below this zoom the whole picture is on screen: nothing follows the mouse. Zoomed in further, the mouse looks around.
+export const MOVE_MIN_ZOOM = 1.25;
 export const ZOOM_STEP = 1.15; // each press of + or - changes the size by 15%
 
 // The widest the whole 16:9 picture can be on this window.

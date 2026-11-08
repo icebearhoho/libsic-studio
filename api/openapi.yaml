@@ -291,7 +291,7 @@ components:
 
     Effect:
       type: string
-      enum: [rain, snow, fireflies, stars, dust]
+      enum: [rain, snow, fireflies, stars, dust, bubbles, plankton]
       description: An animated weather or sky effect.
 
     Scene:
@@ -329,6 +329,11 @@ components:
           minimum: 0
           description: Position in `layers` of the layer the effect is drawn on top of.
           example: 1
+        nightDim:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: How dark the whole picture gets when the lights are off. Leave it out for the usual dimming; a scene that paints its own night in layers can use a small number.
         surfaces:
           type: array
           description: The places where a visitor may put objects (for example the desk). Empty for a scene that cannot be decorated.
@@ -360,6 +365,21 @@ components:
             width: { type: number, minimum: 0, maximum: 100 }
             height: { type: number, minimum: 0, maximum: 100 }
           example: { x: 2, y: 73, width: 96, height: 24 }
+        blocked:
+          type: array
+          description: |
+            Boxes where the contact point of an object may not be, for example the spot of a fixed object. A box
+            may reach past the edge of `area` (then the way out on that side is closed). The editor pushes a dragged
+            object out of a box to the nearest free edge. Omit it (or leave it empty) for a surface without such spots.
+          items:
+            type: object
+            required: [x, y, width, height]
+            properties:
+              x: { type: number, minimum: 0, maximum: 100 }
+              y: { type: number, minimum: 0, maximum: 100 }
+              width: { type: number, minimum: 0, maximum: 100 }
+              height: { type: number, minimum: 0, maximum: 100 }
+          example: [{ x: 0, y: 60, width: 40, height: 27 }]
         drawAt:
           type: integer
           minimum: 0
@@ -460,8 +480,8 @@ components:
             height: { type: number, minimum: 0, maximum: 100 }
         blend:
           type: string
-          enum: [normal, screen]
-          description: Use `screen` for glows, so they add light to what is below them.
+          enum: [normal, screen, multiply]
+          description: Use `screen` for glows, so they add light to what is below them, and `multiply` to darken them while keeping their colour (night shading).
         tile:
           type: number
           minimum: 1
@@ -470,6 +490,31 @@ components:
         light:
           type: boolean
           description: True for lamp light and its glow. These layers fade out when the lights are switched off.
+        glide:
+          type: object
+          required: [from, to, duration]
+          description: |
+            A slow trip across the scene that repeats, for a fish swimming by or a jellyfish drifting up. The layer fades in
+            at `from`, moves in a straight line to `to` and fades out. It can be combined with `anim`.
+          properties:
+            from:
+              type: object
+              required: [x, y]
+              description: "Where the trip starts, in percent of the layer's own width (x) and height (y). It may lie outside the layer."
+              properties:
+                x: { type: number, minimum: -2000, maximum: 2000 }
+                y: { type: number, minimum: -2000, maximum: 2000 }
+            to:
+              type: object
+              required: [x, y]
+              description: Where the trip ends, in the same units as `from`.
+              properties:
+                x: { type: number, minimum: -2000, maximum: 2000 }
+                y: { type: number, minimum: -2000, maximum: 2000 }
+            duration: { type: number, minimum: 1, description: Seconds for one trip. }
+            delay: { type: number, description: "Seconds before it starts; a negative number starts it part of the way along." }
+            mirror: { type: boolean, description: Flip the picture (a fish drawn facing right that swims to the left). }
+            pingpong: { type: boolean, description: "Drift to `to` and back again, smoothly, without fading out and starting over (a jellyfish hanging in the water). `duration` is then one way." }
         night:
           type: boolean
           description: True for a layer that is only shown at night (when the lights are off), such as the night sky in a window.
@@ -499,7 +544,7 @@ components:
           properties:
             name:
               type: string
-              enum: [spin, tonearm, sway, steam, pulse, breathe, drift, flick, billow]
+              enum: [spin, tonearm, sway, steam, pulse, breathe, drift, flick, billow, throb, sweep]
             pivot:
               type: object
               description: The point it turns around, in percent of the layer's own picture.
@@ -513,6 +558,20 @@ components:
             distance: { type: number, minimum: 0, maximum: 100, description: "Drift only. How far it travels, as a percent of the layer's width." }
             amplitude: { type: number, minimum: 0, maximum: 45, description: "Sway, billow and flick. How far it swings, in degrees." }
             skew: { type: number, description: Clock only. Tilt in degrees. }
+            scaleFrom:
+              type: object
+              required: [x, y]
+              description: Throb only. The width (x) and height (y) scale it starts at (1 is normal size).
+              properties:
+                x: { type: number, minimum: 0.2, maximum: 3 }
+                y: { type: number, minimum: 0.2, maximum: 3 }
+            scaleTo:
+              type: object
+              required: [x, y]
+              description: Throb only. The scale it ends at.
+              properties:
+                x: { type: number, minimum: 0.2, maximum: 3 }
+                y: { type: number, minimum: 0.2, maximum: 3 }
 
     SceneObject:
       type: object
@@ -549,7 +608,7 @@ components:
       properties:
         effect:
           type: string
-          enum: [none, rain, snow, fireflies, stars, dust]
+          enum: [none, rain, snow, fireflies, stars, dust, bubbles, plankton]
           default: none
         lightOn:
           type: boolean

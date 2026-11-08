@@ -45,6 +45,28 @@ const BUILDERS = {
       '--dx': px(between(r, -46, 46)),
       '--dy': px(between(r, -60, 30)),
     })),
+  // bubbles rising through water: they start low, wobble sideways and fade out near the top
+  bubbles: () =>
+    makeParticles(46, 66, (r) => ({
+      '--x': pct(between(r, 3, 96)),
+      '--size': px(between(r, 4, 15)),
+      '--dur': sec(between(r, 8, 18)),
+      '--delay': sec(-between(r, 0, 18)),
+      '--wob': px(between(r, -16, 16)),
+      '--wobdur': sec(between(r, 2.2, 4.6)),
+    })),
+  // tiny glowing specks drifting in dark water
+  plankton: () =>
+    makeParticles(90, 77, (r) => ({
+      '--x': pct(between(r, 3, 96)),
+      '--y': pct(between(r, 8, 90)),
+      '--size': px(between(r, 1.6, 4)),
+      '--dur': sec(between(r, 16, 30)),
+      '--blink': sec(between(r, 3, 8)),
+      '--delay': sec(-between(r, 0, 30)),
+      '--dx': px(between(r, -34, 34)),
+      '--dy': px(between(r, -48, 20)),
+    })),
   stars: () =>
     makeParticles(70, 44, (r) => ({
       '--x': pct(between(r, 0, 100)),

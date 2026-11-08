@@ -169,6 +169,59 @@ describe('SceneStage', () => {
       expect(screen.getByTestId('stage')).toHaveClass('lights-off');
     });
 
+    it('lets a fish glide from one point to another, mirrored when asked, and a jellyfish bell throb inside its own trip', () => {
+      const fishy = {
+        ...scene,
+        layers: [
+          ...scene.layers,
+          { name: 'fish', image: '/scenes/test-room/fish1.webp', depth: 0.5, box: { x: 10, y: 20, width: 8, height: 5 }, glide: { from: { x: -150, y: 0 }, to: { x: 900, y: -40 }, duration: 40 } },
+          { name: 'fish left', image: '/scenes/test-room/fish2.webp', depth: 0.5, box: { x: 60, y: 30, width: 8, height: 5 }, glide: { from: { x: 100, y: 0 }, to: { x: -800, y: 20 }, duration: 55, delay: -10, mirror: true } },
+          {
+            name: 'jelly bell',
+            image: '/scenes/test-room/bell.webp',
+            depth: 0.3,
+            box: { x: 30, y: 20, width: 6, height: 4 },
+            glide: { from: { x: 0, y: 600 }, to: { x: 20, y: -300 }, duration: 70, pingpong: true },
+            anim: { name: 'throb', duration: 4, pivot: { x: 50, y: 0 }, scaleFrom: { x: 1.05, y: 0.9 }, scaleTo: { x: 0.97, y: 1.06 } },
+          },
+        ],
+      };
+      const { container } = render(<SceneStage scene={fishy} settings={settings} onSettingsChange={noop} />);
+      const [right, left, jelly] = container.querySelectorAll('.glide');
+      expect(right.style.getPropertyValue('--fx')).toBe('-150%');
+      expect(right.style.getPropertyValue('--ty')).toBe('-40%');
+      expect(right).not.toHaveClass('glide-mirror');
+      expect(left).toHaveClass('glide-mirror');
+      expect(left.style.getPropertyValue('--delay')).toBe('-10s');
+      expect(right).not.toHaveClass('glide-pingpong');
+      expect(jelly).toHaveClass('glide-pingpong');
+      const bell = jelly.querySelector('.anim-throb');
+      expect(bell.style.getPropertyValue('--sy0')).toBe('0.9');
+      expect(bell.style.getPropertyValue('--sx1')).toBe('0.97');
+      expect(bell).toHaveStyle({ transformOrigin: '50% 0%' });
+    });
+
+    it('draws bubbles and plankton when those effects are switched on', () => {
+      const watery = { ...scene, effects: ['bubbles', 'plankton'], effectLayer: 0 };
+      const { container, rerender } = render(<SceneStage scene={watery} settings={{ effect: 'bubbles', lightOn: true }} onSettingsChange={noop} />);
+      expect(container.querySelectorAll('.effect-bubbles i').length).toBeGreaterThan(20);
+      rerender(<SceneStage scene={watery} settings={{ effect: 'plankton', lightOn: true }} onSettingsChange={noop} />);
+      expect(container.querySelectorAll('.effect-plankton i').length).toBeGreaterThan(20);
+    });
+
+    it('lets a scene choose how dark the lights-off dimming is, and draws multiply layers', () => {
+      const custom = { ...scene, nightDim: 0, layers: scene.layers.map((l, i) => (i === 0 ? { ...l, blend: 'multiply' } : l)) };
+      const { container } = render(<SceneStage scene={custom} settings={{ lightOn: false }} onSettingsChange={noop} />);
+      expect(container.querySelector('.dim').style.getPropertyValue('--dim-alpha')).toBe('0');
+      expect(container.querySelector('.layer[data-blend="multiply"]')).not.toBeNull();
+    });
+
+    it('draws a sweep layer that turns all the time', () => {
+      const radar = { ...scene, layers: scene.layers.map((l, i) => (i === 0 ? { ...l, anim: { name: 'sweep', duration: 10 } } : l)) };
+      const { container } = render(<SceneStage scene={radar} settings={{ lightOn: true }} onSettingsChange={noop} />);
+      expect(container.querySelector('.anim-sweep')).not.toBeNull();
+    });
+
     it('draws floating dust when that effect is switched on', () => {
       const dusty = { ...scene, effects: ['dust'], effectLayer: 0 };
       const { container } = render(<SceneStage scene={dusty} settings={{ effect: 'dust', lightOn: true }} onSettingsChange={noop} />);
@@ -291,6 +344,17 @@ describe('SceneStage', () => {
 
     it('stops the layers following the mouse while frozen', () => {
       const { container } = draw({ items: [mug, radio], frozen: true });
+      const stage = screen.getByTestId('stage');
+      Object.defineProperty(stage, 'clientWidth', { value: 1000 });
+      stage.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1000, height: 562 });
+
+      fireEvent.pointerMove(stage, { clientX: 1000, clientY: 562 });
+
+      container.querySelectorAll('.layer').forEach((layer) => expect(layer.style.transform).not.toMatch(/translate\(-?[1-9]/));
+    });
+
+    it('keeps the layers still while the whole picture is shown', () => {
+      const { container } = draw({ items: [mug, radio], still: true });
       const stage = screen.getByTestId('stage');
       Object.defineProperty(stage, 'clientWidth', { value: 1000 });
       stage.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1000, height: 562 });
