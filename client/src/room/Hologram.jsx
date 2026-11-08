@@ -4,6 +4,7 @@
 //             come from SPOTS below; a scene that is not listed starts the beam at the top of its music object.
 //             Each listed room also gets its own look (the .holo-<slug> rules in styles.css): lamp-lit glass, a sunlit card
 //             or a bubbly pearl panel. Other rooms get the plain cyan hologram.
+//   open      false: the hologram is switched off (clicking the music object switches it on and off)
 //   children  what is projected (the CD player)
 const DEFAULT_HUE = 188; // cyan
 
@@ -22,11 +23,11 @@ export function hologramSpot(scene) {
   return { x: box.x + box.width / 2, y: box.y, hue: DEFAULT_HUE };
 }
 
-export default function Hologram({ scene, children }) {
+export default function Hologram({ scene, open = true, children }) {
   const { x, y, hue } = hologramSpot(scene);
   const skin = SPOTS[scene.slug] ? ` holo-${scene.slug}` : '';
   return (
-    <div className={`holo${skin}`} style={{ '--hx': `${x}%`, '--hy': `${y}%`, '--holo-h': hue }}>
+    <div className={`holo${skin}${open ? ' holo-open' : ''}`} aria-hidden={!open} inert={!open} style={{ '--hx': `${x}%`, '--hy': `${y}%`, '--holo-h': hue }}>
       <div className="holo-panel">{children}</div>
       <div className="holo-beam" aria-hidden="true" />
       <div className="holo-emitter" aria-hidden="true" />

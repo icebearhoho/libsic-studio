@@ -39,4 +39,12 @@ describe('Hologram', () => {
     expect(holo.style.getPropertyValue('--hx')).toBe('50%');
     expect(holo.style.getPropertyValue('--hy')).toBe('60%');
   });
+
+  it('is switched on by default and can be switched off', () => {
+    const { container, rerender } = render(<Hologram scene={scene()}>x</Hologram>);
+    expect(container.querySelector('.holo')).toHaveClass('holo-open');
+    rerender(<Hologram scene={scene()} open={false}>x</Hologram>);
+    expect(container.querySelector('.holo')).not.toHaveClass('holo-open');
+    expect(container.querySelector('.holo')).toHaveAttribute('aria-hidden', 'true');
+  });
 });
