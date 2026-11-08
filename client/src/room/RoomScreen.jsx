@@ -46,6 +46,10 @@ export default function RoomScreen({ code }) {
   const [name, setName] = useState('');
   const [items, setItems] = useState(null); // the objects the visitor placed; null = the scene's default arrangement
   const [decorating, setDecorating] = useState(false);
+  // The hologram player is hidden at first. Clicking the music object in the room shows it, and clicking again hides it.
+  // (The music side can also start or skip a track from the same click when it is connected.)
+  const [playerOpen, setPlayerOpen] = useState(false);
+  const togglePlayer = () => setPlayerOpen((open) => !open);
 
   const scene = scenes?.find((s) => s.slug === slug) || scenes?.[0] || NO_SCENE;
   const editor = useItemsEditor(scene, items, setItems);
@@ -208,9 +212,9 @@ export default function RoomScreen({ code }) {
   // The room fills the whole window and every control floats on top of it in a corner.
   return (
     <div ref={view.roomRef} className={`room${idle ? ' idle' : ''}`} style={{ '--zoom': view.zoom }} onWheel={view.onWheel}>
-      <SceneStage scene={scene} settings={settings} onSettingsChange={setSettings} items={items} frozen={decorating} still={view.zoom < MOVE_MIN_ZOOM}>
+      <SceneStage scene={scene} settings={settings} onSettingsChange={setSettings} items={items} frozen={decorating} onNextTrack={togglePlayer} still={view.zoom < MOVE_MIN_ZOOM}>
         {!decorating && (
-          <Hologram scene={scene}>
+          <Hologram scene={scene} open={playerOpen}>
             <CdSlot />
           </Hologram>
         )}

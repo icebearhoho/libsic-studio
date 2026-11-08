@@ -288,7 +288,24 @@ a.chip { text-decoration: none; display: inline-block; }
   font-size: clamp(7px, calc(var(--stage-w) * 0.0086), 17px);
   transform: translate(-50%, calc(-100% - 3.4em));
   pointer-events: none;
+  /* switched off until the music object is clicked: the panel folds down into the beam and fades out */
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.4s ease, visibility 0s linear 0.4s;
 }
+.holo-open {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.4s ease;
+}
+.holo .holo-panel,
+.holo .holo-beam {
+  transform-origin: 50% 100%;
+  transition: scale 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.holo .holo-beam { transform-origin: 50% 0; }
+.holo:not(.holo-open) .holo-panel { scale: 1 0.15; }
+.holo:not(.holo-open) .holo-beam { scale: 1 0; }
 .holo-panel {
   position: relative;
   padding: 1em 1.1em;
@@ -555,6 +572,7 @@ a.chip { text-decoration: none; display: inline-block; }
 @keyframes holo-flicker { 0%, 93%, 96%, 100% { opacity: 1; } 94% { opacity: 0.82; } 95% { opacity: 0.94; } }
 @media (prefers-reduced-motion: reduce) {
   .holo-panel, .holo-panel::before, .holo-beam, .cd-disc { animation: none !important; }
+  .holo, .holo .holo-panel, .holo .holo-beam { transition: none; }
 }
 
 .savebar {

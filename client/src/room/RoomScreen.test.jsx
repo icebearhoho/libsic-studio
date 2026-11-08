@@ -39,6 +39,22 @@ beforeEach(() => {
 });
 afterEach(() => vi.restoreAllMocks());
 
+describe('the hologram player', () => {
+  const holo = (container) => container.querySelector('.holo');
+
+  it('is hidden at first, shown by a click on the music object and hidden by the next click', async () => {
+    const { container } = renderAt('/new');
+    await screen.findByTestId('stage');
+    expect(holo(container)).not.toHaveClass('holo-open');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Radio' }));
+    expect(holo(container)).toHaveClass('holo-open');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Radio' }));
+    expect(holo(container)).not.toHaveClass('holo-open');
+  });
+});
+
 describe('a new room (/new)', () => {
   it('shows a loading message, then the first scene with its default effect', async () => {
     const { container } = renderAt('/new');
@@ -365,6 +381,11 @@ describe('decorating the room', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Decorate' }));
     return view;
   }
+  it('hides the hologram player while decorating', async () => {
+    const { container } = await decorate();
+    expect(container.querySelector('.holo')).toBeNull();
+  });
+
   // Moves the mug one step to the right (a pointer drag does the same, see DecorateOverlay).
   async function nudgeMug() {
     screen.getByRole('button', { name: 'Mug' }).focus();
