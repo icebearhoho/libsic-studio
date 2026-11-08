@@ -8,10 +8,12 @@ const layers = (slug, items) =>
 
 const nightStudy = require('./nightStudy');
 const goldenLoft = require('./goldenLoft');
+const underwaterNook = require('./underwaterNook');
 
 module.exports = [
   nightStudy,
   goldenLoft,
+  underwaterNook,
   {
     slug: 'rainy-cafe',
     name: 'Rainy Café',
