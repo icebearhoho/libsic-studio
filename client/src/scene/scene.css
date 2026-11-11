@@ -13,9 +13,15 @@
   position: absolute;
   inset: 0;
   pointer-events: none; /* only the object buttons catch clicks */
-  transition: transform 0.25s ease-out;
-  will-change: transform;
+  transition: transform 0.25s ease-out, opacity 0.6s ease; /* opacity: lamp light and its glow fade with the lamp */
   transform: scale(1.06); /* slightly bigger than the stage so the edges never show while moving */
+}
+
+/* Every layer keeps its own ready-drawn sheet on the graphics card. Zooming and looking around then only move and
+   enlarge those sheets. Without this the browser redraws each layer after every zoom step to make it sharper, and
+   the layers that are not redrawn in time show up black for a moment. */
+.stage .layer {
+  will-change: transform;
 }
 
 /* A mirrored object: the picture is flipped inside its (already mirrored) box. */
@@ -24,11 +30,16 @@
   height: 100%;
 }
 
-.layer img {
+.layer img,
+.layer .sheet {
   display: block;
   width: 100%;
   height: 100%;
   user-select: none;
+}
+/* Of the picture and its sheet on the graphics card (see LayerPicture in SceneStage.jsx) only one is shown. */
+.stage .layer .stepped-aside {
+  display: none; /* written with .stage in front so it also wins over the picture rules of the animated layers below */
 }
 
 /* "Lights off": a dark layer over the whole picture. */
@@ -48,18 +59,22 @@
 .hotspot {
   position: absolute;
   padding: 0;
-  border: 2px solid transparent;
-  border-radius: 10px;
+  border: 1px solid transparent;
+  border-radius: 14px;
   background: transparent;
   cursor: pointer;
   pointer-events: auto;
-  transition: border-color 0.2s, background 0.2s, transform 0.1s;
+  visibility: visible; /* stays clickable when its layer is hidden (a day picture at night) */
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.1s;
 }
+/* Pointing at an object lights it softly from inside (a glow, not a hard white box). The keyboard keeps a clear outline. */
 .hotspot:hover,
 .hotspot:focus-visible {
-  border-color: rgba(255, 255, 255, 0.75);
-  background: rgba(255, 255, 255, 0.08);
+  background: radial-gradient(ellipse closest-side, rgba(255, 255, 255, 0.17), rgba(255, 255, 255, 0)); /* fades out before the edge: no box */
   outline: none;
+}
+.hotspot:focus-visible {
+  border-color: rgba(255, 255, 255, 0.75);
 }
 .hotspot:active {
   transform: scale(0.97);
@@ -104,17 +119,42 @@
   to { opacity: 1; }
 }
 
-/* Rain */
-.effect-rain i {
-  top: -10cqh;
-  left: var(--x);
-  width: 1.5px;
-  height: var(--len);
-  background: linear-gradient(to bottom, transparent, rgba(190, 210, 255, var(--alpha)));
-  animation: rain-fall var(--dur) linear var(--delay) infinite;
+/* Rain: three repeating sheets of streaks slide down at different speeds (see Effects.jsx). A sheet is one square
+   picture repeated, and it moves by exactly one square, so the loop has no jump. */
+.effect-rain {
+  --slant: 0.16;
 }
+.effect-rain .rain-sheet {
+  inset: calc(var(--tile) * -1) calc(var(--tile) * -0.2) 0 0;
+  background-repeat: repeat;
+  background-size: var(--tile) var(--tile);
+  animation: rain-fall var(--dur) linear infinite;
+  will-change: transform;
+}
+.rain-far { --tile: 15cqw; --dur: 1.5s; opacity: 0.55; }
+.rain-mid { --tile: 24cqw; --dur: 1.05s; opacity: 0.8; }
+.rain-near { --tile: 38cqw; --dur: 0.8s; filter: blur(0.4px); }
 @keyframes rain-fall {
-  to { transform: translate(-22px, 125cqh); }
+  to { transform: translate3d(calc(var(--tile) * var(--slant) * -1), var(--tile), 0); }
+}
+/* A drop on the window glass: it sits still, then runs down a little way and fades. */
+.effect-rain .rain-drop {
+  left: var(--x);
+  top: var(--y);
+  width: var(--size);
+  height: calc(var(--size) * 1.25);
+  border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.85) 0 12%, rgba(190, 215, 255, 0.28) 40%, rgba(150, 185, 240, 0.12) 70%, rgba(220, 235, 255, 0.5) 100%);
+  opacity: 0;
+  animation: rain-drop var(--dur) ease-in var(--delay) infinite;
+  will-change: transform, opacity;
+}
+@keyframes rain-drop {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; }
+  8% { opacity: 0.9; }
+  62% { transform: translate3d(0, 0, 0); opacity: 0.9; }
+  92% { opacity: 0.7; }
+  100% { transform: translate3d(calc(var(--run) * -0.05), var(--run), 0); opacity: 0; }
 }
 
 /* Snow */
@@ -263,19 +303,23 @@
   mix-blend-mode: multiply;
 }
 /* Lamp light and its glow switch off with the lamp. */
-.layer {
-  transition: transform 0.25s ease-out, opacity 0.6s ease;
-}
+/* A layer that has faded out is also hidden (visibility), after its fade has finished. The browser then skips it
+   completely: it is not drawn and its movements stop costing anything. Coming back, it is shown at once and fades in. */
 .stage.lights-off .layer[data-light] {
   opacity: 0;
+  visibility: hidden;
+  transition: transform 0.25s ease-out, opacity 0.6s ease, visibility 0s 0.6s;
 }
 /* Night pictures (the night sky in a window) come in slowly when the lights go off. */
 .layer[data-night] {
   opacity: 0;
-  transition: transform 0.25s ease-out, opacity 1.6s ease;
+  visibility: hidden;
+  transition: transform 0.25s ease-out, opacity 1.6s ease, visibility 0s 1.6s;
 }
 .stage.lights-off .layer[data-night] {
   opacity: 1;
+  visibility: visible;
+  transition: transform 0.25s ease-out, opacity 1.6s ease;
 }
 
 /* Curtains slide shut: the layer grows out of its outer edge. Only transform changes, so it stays smooth. */
@@ -304,7 +348,9 @@
   height: 100%;
 }
 .anim img,
-.anim .spin img {
+.anim .sheet,
+.anim .spin img,
+.anim .spin .sheet {
   display: block;
   width: 100%;
   height: 100%;
@@ -335,6 +381,25 @@
 }
 .stage.paused .anim-tonearm {
   transform: rotate(var(--rest, -14deg));
+}
+
+/* A shell that closes while the music is paused (the giant clam). Two pictures do it together:
+   "shut" is the upper shell behind the pearl, "cover" is the same shell drawn in front of the pearl. Both fold down by the
+   same amount, and the one in front fades in while they fold, so the shell seems to come down over the pearl. */
+.anim-shut,
+.anim-cover {
+  transition: transform 1.3s cubic-bezier(0.45, 0, 0.2, 1), opacity 0.4s ease 0.9s; /* opening: the front shell fades away at the end */
+}
+.anim-cover {
+  opacity: 0;
+}
+.stage.paused .anim-shut,
+.stage.paused .anim-cover {
+  transform: scaleY(var(--squash, 0.6));
+}
+.stage.paused .anim-cover {
+  opacity: 1;
+  transition: transform 1.3s cubic-bezier(0.45, 0, 0.2, 1), opacity 0.4s ease; /* closing: it appears as the shell starts to fold */
 }
 
 /* Leaves sway a little around the point where they join the stem. */
@@ -418,7 +483,8 @@
   from { transform: translate3d(var(--fx), var(--fy), 0); }
   to { transform: translate3d(var(--tx), var(--ty), 0); }
 }
-.glide-mirror img {
+.glide-mirror img,
+.glide-mirror .sheet {
   transform: scaleX(-1);
 }
 
@@ -498,6 +564,6 @@
   .anim-spin .spin,
   .clock-face .colon { animation: none; }
   .layer { transition: opacity 0.6s ease; }
-  .curtain { transition: none; }
+  .curtain, .anim-shut, .anim-cover { transition: none; }
   .glide { animation: none; }
 }

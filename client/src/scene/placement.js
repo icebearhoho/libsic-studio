@@ -51,17 +51,22 @@ export function buildDrawList(scene, items) {
     placedBySurface.get(surface).push({ item, entry });
   }
 
-  const drawItemsOf = (surface) =>
-    (placedBySurface.get(surface) || [])
-      .sort((a, b) => a.item.y - b.item.y || a.item.id.localeCompare(b.item.id))
-      .flatMap(({ item, entry }) =>
+  // A shadow (a layer with mirror: false) lies flat on the surface, so the shadows of all objects are drawn first and
+  // the objects themselves after them. Otherwise the shadow of a nearer object would be painted over the object behind it.
+  const isShadow = (layer) => layer.mirror === false;
+  const drawItemsOf = (surface) => {
+    const placed = (placedBySurface.get(surface) || []).sort((a, b) => a.item.y - b.item.y || a.item.id.localeCompare(b.item.id));
+    const picturesOf = (wanted) =>
+      placed.flatMap(({ item, entry }) =>
         scene.layers.flatMap((layer, templateIndex) => {
-          if (layer.item !== item.key) return [];
-          const flip = Boolean(item.flip) && layer.mirror !== false; // a shadow keeps its side
+          if (layer.item !== item.key || isShadow(layer) !== wanted) return [];
+          const flip = Boolean(item.flip) && !isShadow(layer); // a shadow keeps its side
           const box = placeBox(layer.box, { ...item, flip }, entry, surface);
           return [{ key: `${item.id}:${templateIndex}`, itemId: item.id, layer, box, templateIndex, flip }];
         })
       );
+    return [...picturesOf(true), ...picturesOf(false)];
+  };
 
   const surfaces = scene.surfaces || [];
   const list = [];

@@ -30,7 +30,6 @@ export async function request(path, { method = 'GET', body, headers = {} } = {})
 }
 
 export const getScenes = () => request('/api/scenes');
-export const getScene = (slug) => request(`/api/scenes/${encodeURIComponent(slug)}`);
 
 // Rooms. Creating a room returns { room, editKey }; keep the editKey, it is shown only once.
 export const getRoom = (code) => request(`/api/rooms/${encodeURIComponent(code)}`);
