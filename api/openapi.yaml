@@ -11,6 +11,10 @@ info:
     Only a hash of the key is stored on the server.
 
     Data is sent and received as JSON. Errors always look like `{ "error": "..." }`.
+
+    **Fair use.** One visitor may send 300 requests per minute to the `/api` addresses. Above that the API
+    answers `429 Too Many Requests` until the minute is over. Answers are sent compressed (gzip) to browsers
+    that accept it.
 servers:
   - url: /
     description: This server
@@ -51,7 +55,9 @@ paths:
     get:
       tags: [Scenes]
       summary: List all scenes
-      description: Returns every scene with its layers and clickable objects, sorted by name.
+      description: >-
+        Returns the menu of scenes, sorted by name: only the slug, name and description of each one.
+        The layers and clickable objects of a scene are sent by GET /api/scenes/{slug}, for the scene that is opened.
       operationId: listScenes
       responses:
         '200':
@@ -61,7 +67,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Scene'
+                  $ref: '#/components/schemas/SceneSummary'
         '500':
           $ref: '#/components/responses/ServerError'
 
@@ -293,6 +299,21 @@ components:
       type: string
       enum: [rain, snow, fireflies, stars, dust, bubbles, plankton]
       description: An animated weather or sky effect.
+
+    SceneSummary:
+      type: object
+      description: One line of the scene menu. The full scene is read with GET /api/scenes/{slug}.
+      required: [slug, name]
+      properties:
+        slug:
+          type: string
+          example: night-study
+        name:
+          type: string
+          example: Rainy Night Study
+        description:
+          type: string
+          example: A quiet desk above the city at night.
 
     Scene:
       type: object

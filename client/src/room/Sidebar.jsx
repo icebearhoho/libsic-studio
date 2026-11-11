@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 // The side bar at the left of the room. Everything a visitor can press lives in here and nowhere else:
@@ -48,8 +48,13 @@ export function Section({ title, children }) {
 // A block that starts folded shut behind a small button, for the settings that are rarely needed.
 export function More({ label, children }) {
   const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  // The block opens at the bottom of a list that scrolls, so it is brought into view; otherwise nothing seems to happen.
+  useEffect(() => {
+    if (open) ref.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+  }, [open]);
   return (
-    <section className="side-section">
+    <section className="side-section" ref={ref}>
       <button type="button" className="side-more" aria-expanded={open} onClick={() => setOpen(!open)}>
         {label} <span aria-hidden="true">{open ? '\u2212' : '+'}</span>
       </button>

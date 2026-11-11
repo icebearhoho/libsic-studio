@@ -165,6 +165,44 @@ describe('the side bar', () => {
   });
 });
 
+describe('opening scenes from the menu', () => {
+  // The real API lists only slug, name and description; the layers come from getScene, one scene at a time.
+  const line = ({ slug, name, description }) => ({ slug, name, description });
+
+  it('fetches only the scene that is shown, and another one when it is picked', async () => {
+    api.getScenes.mockResolvedValue([line(scene), line(otherScene)]);
+    vi.spyOn(api, 'getScene').mockImplementation(async (slug) => [scene, otherScene].find((s) => s.slug === slug));
+    renderAt('/new');
+    await screen.findByTestId('stage');
+
+    expect(api.getScene).toHaveBeenCalledTimes(1);
+    expect(api.getScene).toHaveBeenCalledWith(scene.slug);
+
+    await pick('Switch room', 'Other Room');
+    await waitFor(() => expect(inGroup('Switch room', 'Other Room')).toHaveAttribute('aria-pressed', 'true'));
+    expect(api.getScene).toHaveBeenCalledWith(otherScene.slug);
+
+    await pick('Switch room', 'Test Room'); // already fetched: shown again without asking
+    expect(inGroup('Switch room', 'Test Room')).toHaveAttribute('aria-pressed', 'true');
+    expect(api.getScene).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('low power mode', () => {
+  it('holds the picture still, and the browser remembers the choice', async () => {
+    renderAt('/new');
+    const stage = await screen.findByTestId('stage');
+    expect(stage).not.toHaveClass('calm');
+
+    await more();
+    await userEvent.click(screen.getByRole('button', { name: 'Low power off' }));
+
+    expect(stage).toHaveClass('calm');
+    expect(screen.getByRole('button', { name: 'Low power on' })).toHaveAttribute('aria-pressed', 'true');
+    expect(localStorage.getItem('libsic.lowPower')).toBe('1');
+  });
+});
+
 describe('zoom', () => {
   const zoomOf = (container) => Number(container.querySelector('.room').style.getPropertyValue('--zoom'));
 
@@ -347,11 +385,12 @@ describe('editing your own room', () => {
 
   it('deletes the room after the visitor confirms, then starts a new room', async () => {
     vi.spyOn(api, 'deleteRoom').mockResolvedValue(null);
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     renderAt(`/r/${savedRoom.code}`);
     await screen.findByTestId('stage');
 
     await userEvent.click(screen.getByRole('button', { name: 'Delete room' }));
+    expect(api.deleteRoom).not.toHaveBeenCalled(); // the bar asks once more first
+    await userEvent.click(screen.getByRole('button', { name: 'Yes, delete' }));
 
     expect(api.deleteRoom).toHaveBeenCalledWith(savedRoom.code, 'secret-key');
     expect(await screen.findByRole('button', { name: 'Save room' })).toBeInTheDocument();
@@ -361,11 +400,13 @@ describe('editing your own room', () => {
 
   it('does nothing when the visitor cancels the delete', async () => {
     vi.spyOn(api, 'deleteRoom').mockResolvedValue(null);
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
     renderAt(`/r/${savedRoom.code}`);
     await screen.findByTestId('stage');
 
     await userEvent.click(screen.getByRole('button', { name: 'Delete room' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Keep it' }));
+
+    expect(screen.getByRole('button', { name: 'Delete room' })).toBeInTheDocument();
 
     expect(api.deleteRoom).not.toHaveBeenCalled();
     expect(getMyRooms()).toHaveLength(1);
