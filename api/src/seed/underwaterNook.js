@@ -11,7 +11,7 @@ module.exports = {
   layers: [
     { name: 'sea', image: '/scenes/underwater-nook/sea.webp', depth: 0.02 }, // 0
     { name: 'sun glimmer', image: '/scenes/underwater-nook/sun_glimmer.webp', depth: 0.03, box: { x: 74.56, y: 0.0, width: 25.38, height: 38.33 }, blend: 'screen', light: true }, // 1
-    { name: 'night glint', image: '/scenes/underwater-nook/snell_night.webp', depth: 0.03, blend: 'screen', night: true }, // 2
+    { name: 'night glint', image: '/scenes/underwater-nook/snell_night.webp', depth: 0.03, box: { x: 76.81, y: 0.0, width: 23.19, height: 34.56 }, blend: 'screen', night: true }, // 2
     { name: 'far light shafts', image: '/scenes/underwater-nook/rays_far.webp', depth: 0.05, box: { x: 0.0, y: 0.0, width: 99.92, height: 72.59 }, blend: 'screen', light: true, anim: { name: 'sway', amplitude: 1.32, pivot: { x: 92.58, y: -4.59 }, duration: 26, delay: 0.0 } }, // 3
     { name: 'night shimmer', image: '/scenes/underwater-nook/beams_night.webp', depth: 0.05, blend: 'screen', night: true, anim: { name: 'sway', amplitude: 0.72, pivot: { x: 92.5, y: -3.33 }, duration: 38, delay: 12.0 } }, // 4
     { name: 'distant ridge', image: '/scenes/underwater-nook/reef_far0.webp', depth: 0.04, box: { x: 0.0, y: 29.89, width: 99.94, height: 31.56 } }, // 5
@@ -45,9 +45,9 @@ module.exports = {
     { name: 'reef by the clam', image: '/scenes/underwater-nook/reef_c3.webp', depth: 0.4, box: { x: 40.65, y: 76.27, width: 24.05, height: 13.6 } }, // 33
     { name: 'shells and starfish', image: '/scenes/underwater-nook/sand_front.webp', depth: 0.7, box: { x: 0.8, y: 79.73, width: 99.15, height: 17.07 } }, // 34
     { name: 'near haze', image: '/scenes/underwater-nook/fog_2.webp', depth: 0.46, anim: { name: 'drift', distance: 2.0, duration: 29.0, delay: 12.0 } }, // 35
-    { name: 'light net on the sand', image: '/scenes/underwater-nook/caustics.webp', depth: 0.5, blend: 'screen', light: true, anim: { name: 'pulse', duration: 7.5, delay: 0.0 } }, // 36
+    { name: 'light net on the sand', image: '/scenes/underwater-nook/caustics.webp', depth: 0.5, box: { x: 0.0, y: 64.0, width: 100.0, height: 36.0 }, blend: 'screen', light: true, anim: { name: 'pulse', duration: 7.5, delay: 0.0 } }, // 36
     { name: 'near light shafts', image: '/scenes/underwater-nook/rays_near.webp', depth: 0.52, box: { x: 0.0, y: 0.0, width: 85.17, height: 71.41 }, blend: 'screen', light: true, anim: { name: 'sway', amplitude: 0.96, pivot: { x: 108.61, y: -4.67 }, duration: 34, delay: 9.0 } }, // 37
-    { name: 'shadow under the clam', image: '/scenes/underwater-nook/clam_contact.webp', depth: 0.58 }, // 38
+    { name: 'shadow under the clam', image: '/scenes/underwater-nook/clam_contact.webp', depth: 0.58, box: { x: 3.38, y: 89.78, width: 36.62, height: 7.33 } }, // 38
     { name: 'night water', image: '/scenes/underwater-nook/night_veil.webp', depth: 0.55, blend: 'multiply', night: true }, // 39
     { name: 'jellyfish 2 tent glow (night)', image: '/scenes/underwater-nook/jelly_2_tent_glow.webp', depth: 0.28, box: { x: 42.42, y: 11.33, width: 7.71, height: 17.19 }, blend: 'screen', night: true, anim: { name: 'throb', pivot: { x: 42.41, y: 22.24 }, duration: 4.4, delay: 1.3, scaleFrom: { x: 1.04, y: 0.94 }, scaleTo: { x: 0.96, y: 1.04 } }, glide: { from: { x: 0.0, y: 0.0 }, to: { x: 6.49, y: 19.4 }, duration: 64, delay: 18.0, pingpong: true } }, // 40
     { name: 'jellyfish 2 bell glow (night)', image: '/scenes/underwater-nook/jelly_2_bell_glow.webp', depth: 0.28, box: { x: 43.17, y: 11.56, width: 5.0, height: 5.85 }, blend: 'screen', night: true, anim: { name: 'throb', pivot: { x: 50.39, y: 61.51 }, duration: 4.4, delay: 1.3, scaleFrom: { x: 1.04, y: 0.94 }, scaleTo: { x: 0.96, y: 1.04 } }, glide: { from: { x: 0.0, y: 0.0 }, to: { x: 10.0, y: 56.96 }, duration: 64, delay: 18.0, pingpong: true } }, // 41
@@ -58,22 +58,25 @@ module.exports = {
     { name: 'glowing coral tips', image: '/scenes/underwater-nook/glow_coral.webp', depth: 0.4, box: { x: 0.0, y: 0.0, width: 99.94, height: 89.89 }, blend: 'screen', night: true, anim: { name: 'pulse', duration: 4.5, delay: 1.0 } }, // 46
     { name: 'marine snow', image: '/scenes/underwater-nook/marine_snow_night.webp', depth: 0.3, blend: 'screen', night: true, anim: { name: 'drift', distance: 2.0, duration: 42.0, delay: 10.0 } }, // 47
     { name: 'plankton glints', image: '/scenes/underwater-nook/plankton_night.webp', depth: 0.32, blend: 'screen', night: true, anim: { name: 'drift', distance: 2.0, duration: 33.0, delay: 20.0 } }, // 48
-    { name: 'pearl light on the sand', image: '/scenes/underwater-nook/night_pool.webp', depth: 0.5, blend: 'screen', night: true }, // 49
-    { name: 'clam shell left', image: '/scenes/underwater-nook/clam_up_l.webp', depth: 0.6, box: { x: 4.75, y: 60.33, width: 17.94, height: 22.33 }, light: true, anim: { name: 'tonearm', rest: 5.0, pivot: { x: 99.96, y: 106.58 } } }, // 50
-    { name: 'clam shell right', image: '/scenes/underwater-nook/clam_up_r.webp', depth: 0.6, box: { x: 22.63, y: 60.0, width: 16.53, height: 20.67 }, light: true, anim: { name: 'tonearm', rest: -5.0, pivot: { x: 0.33, y: 116.79 } } }, // 51
+    { name: 'pearl light on the sand', image: '/scenes/underwater-nook/night_pool.webp', depth: 0.5, box: { x: 0.0, y: 88.89, width: 47.56, height: 11.11 }, blend: 'screen', night: true }, // 49
+    { name: 'clam shell left', image: '/scenes/underwater-nook/clam_up_l.webp', depth: 0.6, box: { x: 4.75, y: 60.33, width: 17.94, height: 22.33 }, light: true, anim: { name: 'shut', squash: 0.6, pivot: { x: 99.96, y: 101.5 } } }, // 50
+    { name: 'clam shell right', image: '/scenes/underwater-nook/clam_up_r.webp', depth: 0.6, box: { x: 22.63, y: 60.0, width: 16.53, height: 20.67 }, light: true, anim: { name: 'shut', squash: 0.6, pivot: { x: 0.33, y: 111.3 } } }, // 51
     { name: 'clam lower shell', image: '/scenes/underwater-nook/clam_lower.webp', depth: 0.6, box: { x: 4.75, y: 73.39, width: 34.41, height: 11.11 }, light: true }, // 52
-    { name: 'clam shell left (night)', image: '/scenes/underwater-nook/night_up_l.webp', depth: 0.6, box: { x: 4.75, y: 60.33, width: 17.94, height: 22.33 }, night: true, anim: { name: 'tonearm', rest: 5.0, pivot: { x: 99.96, y: 106.58 } } }, // 53
-    { name: 'clam shell right (night)', image: '/scenes/underwater-nook/night_up_r.webp', depth: 0.6, box: { x: 22.63, y: 60.0, width: 16.53, height: 20.67 }, night: true, anim: { name: 'tonearm', rest: -5.0, pivot: { x: 0.33, y: 116.79 } } }, // 54
+    { name: 'clam shell left (night)', image: '/scenes/underwater-nook/night_up_l.webp', depth: 0.6, box: { x: 4.75, y: 60.33, width: 17.94, height: 22.33 }, night: true, anim: { name: 'shut', squash: 0.6, pivot: { x: 99.96, y: 101.5 } } }, // 53
+    { name: 'clam shell right (night)', image: '/scenes/underwater-nook/night_up_r.webp', depth: 0.6, box: { x: 22.63, y: 60.0, width: 16.53, height: 20.67 }, night: true, anim: { name: 'shut', squash: 0.6, pivot: { x: 0.33, y: 111.3 } } }, // 54
     { name: 'clam lower shell (night)', image: '/scenes/underwater-nook/night_lower.webp', depth: 0.6, box: { x: 4.75, y: 73.39, width: 34.41, height: 11.11 }, night: true }, // 55
     { name: 'pearl glow', image: '/scenes/underwater-nook/pearl_halo.webp', depth: 0.6, box: { x: 13.13, y: 59.56, width: 20.38, height: 36.22 }, blend: 'screen', anim: { name: 'pulse', duration: 5.0, delay: 0.0 } }, // 56
-    { name: 'pearl glow at night', image: '/scenes/underwater-nook/pearl_halo_night.webp', depth: 0.6, blend: 'screen', night: true, anim: { name: 'pulse', duration: 5.0, delay: 0.0 } }, // 57
+    { name: 'pearl glow at night', image: '/scenes/underwater-nook/pearl_halo_night.webp', depth: 0.6, box: { x: 7.0, y: 48.67, width: 32.62, height: 51.33 }, blend: 'screen', night: true, anim: { name: 'pulse', duration: 5.0, delay: 0.0 } }, // 57
     { name: 'pearl', image: '/scenes/underwater-nook/pearl_disc.webp', depth: 0.6, box: { x: 19.25, y: 70.33, width: 8.03, height: 14.33 }, anim: { name: 'spin', squash: 1.0, duration: 6.0 } }, // 58
     { name: 'pearl shine', image: '/scenes/underwater-nook/pearl_shine.webp', depth: 0.6, box: { x: 19.32, y: 70.5, width: 7.91, height: 14.06 } }, // 59
-    { name: 'pearl bloom at night', image: '/scenes/underwater-nook/pearl_bloom_night.webp', depth: 0.6, blend: 'screen', night: true, anim: { name: 'pulse', duration: 3.6, delay: 1.0 } }, // 60
+    { name: 'pearl bloom at night', image: '/scenes/underwater-nook/pearl_bloom_night.webp', depth: 0.6, box: { x: 17.12, y: 66.67, width: 12.38, height: 22.0 }, blend: 'screen', night: true, anim: { name: 'pulse', duration: 3.6, delay: 1.0 } }, // 60
     { name: 'clam mantle', image: '/scenes/underwater-nook/clam_mantle.webp', depth: 0.6, box: { x: 4.94, y: 72.22, width: 34.09, height: 11.5 }, light: true }, // 61
     { name: 'clam mantle (night)', image: '/scenes/underwater-nook/night_mantle.webp', depth: 0.6, box: { x: 4.94, y: 72.22, width: 34.09, height: 11.5 }, night: true }, // 62
     { name: 'clam front lip', image: '/scenes/underwater-nook/clam_front.webp', depth: 0.6, box: { x: 4.81, y: 73.89, width: 34.31, height: 10.61 }, light: true }, // 63
     { name: 'clam front lip (night)', image: '/scenes/underwater-nook/night_front.webp', depth: 0.6, box: { x: 4.81, y: 73.89, width: 34.31, height: 10.61 }, night: true }, // 64
+    // The closed shell: the same upper shell drawn in front of the pearl. It is invisible while the music plays and comes down over the pearl when it stops.
+    { name: 'clam closed shell', image: '/scenes/underwater-nook/clam_lid.webp', depth: 0.6, box: { x: 4.75, y: 60.0, width: 34.41, height: 22.66 }, light: true, anim: { name: 'cover', squash: 0.6, pivot: { x: 50.0, y: 101.5 } } },
+    { name: 'clam closed shell (night)', image: '/scenes/underwater-nook/night_lid.webp', depth: 0.6, box: { x: 4.75, y: 60.0, width: 34.41, height: 22.66 }, night: true, anim: { name: 'cover', squash: 0.6, pivot: { x: 50.0, y: 101.5 } } },
     { name: 'sand and shells at the clam base', image: '/scenes/underwater-nook/clam_debris.webp', depth: 0.62, box: { x: 3.95, y: 83.29, width: 37.15, height: 10.22 }, light: true }, // 65
     { name: 'sand and shells at the clam base (night)', image: '/scenes/underwater-nook/night_debris.webp', depth: 0.62, box: { x: 3.95, y: 83.29, width: 37.15, height: 10.22 }, night: true }, // 66
     { name: 'clam siphon', image: '/scenes/underwater-nook/clam_siphon.webp', depth: 0.6, box: { x: 36.16, y: 64.56, width: 3.56, height: 15.17 }, light: true, anim: { name: 'breathe', pivot: { x: 51.75, y: 104.78 }, duration: 3.8, delay: 1.2 } }, // 67
@@ -87,7 +90,7 @@ module.exports = {
     { name: 'eye 7', image: '/scenes/underwater-nook/eye_7.webp', depth: 0.6, box: { x: 29.66, y: 73.61, width: 2.97, height: 5.28 }, blend: 'screen', anim: { name: 'throb', pivot: { x: 50.58, y: 50.26 }, duration: 1.2, delay: 0.2, scaleFrom: { x: 0.62, y: 0.62 }, scaleTo: { x: 1.4, y: 1.4 } } }, // 75
     { name: 'eye 8', image: '/scenes/underwater-nook/eye_8.webp', depth: 0.6, box: { x: 31.59, y: 73.83, width: 2.69, height: 4.83 }, blend: 'screen', anim: { name: 'throb', pivot: { x: 50.64, y: 50.19 }, duration: 1.0, delay: 1.7, scaleFrom: { x: 0.62, y: 0.62 }, scaleTo: { x: 1.4, y: 1.4 } } }, // 76
     { name: 'eye 9', image: '/scenes/underwater-nook/eye_9.webp', depth: 0.6, box: { x: 34.13, y: 71.72, width: 2.78, height: 4.94 }, blend: 'screen', anim: { name: 'throb', pivot: { x: 50.87, y: 50.73 }, duration: 0.85, delay: 2.96, scaleFrom: { x: 0.62, y: 0.62 }, scaleTo: { x: 1.4, y: 1.4 } } }, // 77
-    { name: 'eye glow at night', image: '/scenes/underwater-nook/eyes_halo_night.webp', depth: 0.6, blend: 'screen', night: true, anim: { name: 'pulse', duration: 2.8, delay: 0.0 } }, // 78
+    { name: 'eye glow at night', image: '/scenes/underwater-nook/eyes_halo_night.webp', depth: 0.6, box: { x: 7.0, y: 68.89, width: 31.62, height: 15.78 }, blend: 'screen', night: true, anim: { name: 'pulse', duration: 2.8, delay: 0.0 } }, // 78
     { name: 'bubble area', image: '/scenes/underwater-nook/sea_bubbles.webp', depth: 0.6 }, // 79
     { name: 'foreground kelp 3', image: '/scenes/underwater-nook/kelp_fg_r.webp', depth: 0.9, box: { x: 87.75, y: 0.0, width: 12.2, height: 61.33 }, anim: { name: 'sway', amplitude: 1.4, pivot: { x: 171.55, y: 160.29 }, duration: 8.2, delay: 2.0 } }, // 80
     { name: 'vignette', image: '/scenes/underwater-nook/vignette.webp', depth: 0.0, light: true }, // 81
@@ -153,11 +156,11 @@ module.exports = {
   ],
   // seabed: nearer (lower) things look bigger and are drawn in front of the sand, behind the foreground kelp; `blocked` is the clam: things are pushed out of it. water: things floating in the open water, behind the clam.
   surfaces: [
-    { key: 'seabed', area: { x: 28, y: 78, width: 70, height: 18 }, blocked: [{ x: 0, y: 60, width: 40.5, height: 27 }], drawAt: 79, perspective: { farY: 70, nearY: 96, farScale: 0.65, nearScale: 1.35 } },
+    { key: 'seabed', area: { x: 28, y: 78, width: 70, height: 18 }, blocked: [{ x: 0, y: 60, width: 40.5, height: 27 }], drawAt: 81, perspective: { farY: 70, nearY: 96, farScale: 0.65, nearScale: 1.35 } },
     { key: 'water', area: { x: 3, y: 10, width: 94, height: 52 }, drawAt: 50, perspective: { farY: 12, nearY: 62, farScale: 0.75, nearScale: 1.25 } },
   ],
   effects: ['bubbles', 'plankton'],
   defaultEffect: 'bubbles', // bubbles rise from the start; clicking the open water switches them off
-  effectLayer: 79, // the empty bubble-area layer: the whole cove is under water
+  effectLayer: 81, // the empty bubble-area layer: the whole cove is under water
   nightDim: 0, // the night is painted in the layers themselves (night water, glows), so no extra darkening
 };

@@ -101,9 +101,9 @@ paths:
               $ref: '#/components/schemas/RoomInput'
             example:
               name: Late night reading
-              sceneSlug: cozy-cabin
+              sceneSlug: night-study
               settings:
-                effect: snow
+                effect: rain
                 lightOn: false
       responses:
         '201':
@@ -207,7 +207,7 @@ components:
       description: The scene's readable name in the address.
       schema:
         type: string
-      example: rainy-cafe
+      example: night-study
     RoomCode:
       name: code
       in: path
@@ -300,10 +300,10 @@ components:
       properties:
         slug:
           type: string
-          example: rainy-cafe
+          example: night-study
         name:
           type: string
-          example: Rainy Café
+          example: Rainy Night Study
         description:
           type: string
           example: A late-night café with a big window onto a rainy, neon-lit street.
@@ -457,7 +457,7 @@ components:
         image:
           type: string
           description: Path of the image file on the website.
-          example: /scenes/rainy-cafe/layer-2.svg
+          example: /scenes/night-study/l2_city.webp
         depth:
           type: number
           minimum: 0
@@ -544,7 +544,7 @@ components:
           properties:
             name:
               type: string
-              enum: [spin, tonearm, sway, steam, pulse, breathe, drift, flick, billow, throb, sweep]
+              enum: [spin, tonearm, sway, steam, pulse, breathe, drift, flick, billow, throb, sweep, shut, cover]
             pivot:
               type: object
               description: The point it turns around, in percent of the layer's own picture.
@@ -553,7 +553,7 @@ components:
                 y: { type: number }
             duration: { type: number, minimum: 0.1, description: Seconds for one round. }
             delay: { type: number, description: Seconds before it starts. }
-            squash: { type: number, minimum: 0.05, maximum: 1, description: Spin only. How flat the record looks. }
+            squash: { type: number, minimum: 0.05, maximum: 1, description: "Spin: how flat the record looks. Shut and cover: how low the shell folds when the music is paused." }
             rest: { type: number, description: Tonearm only. Angle in degrees when the music is paused. }
             distance: { type: number, minimum: 0, maximum: 100, description: "Drift only. How far it travels, as a percent of the layer's width." }
             amplitude: { type: number, minimum: 0, maximum: 45, description: "Sway, billow and flick. How far it swings, in degrees." }
@@ -637,7 +637,7 @@ components:
           example: Late night reading
         sceneSlug:
           type: string
-          example: cozy-cabin
+          example: night-study
         cdCode:
           type: string
           nullable: true

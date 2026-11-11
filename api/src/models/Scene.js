@@ -13,7 +13,8 @@ const glideCoord = { type: Number, required: true, min: -2000, max: 2000 };
 // A small movement for a layer. Which one is picked by name:
 //   spin (the record), tonearm, sway (leaves), steam, pulse (glows), breathe (a sleeping cat), drift (clouds),
 //   flick (a tail), billow (a curtain in the breeze), throb (a jellyfish bell squashing and stretching),
-//   sweep (a radar beam turning all the time)
+//   sweep (a radar beam turning all the time), shut (a shell that folds down while the music is paused),
+//   cover (the same, but only visible while paused: the closed shell in front of the pearl)
 // pivot: the point it turns around, in percent of the layer's own picture.
 const animSchema = new Schema(
   {
@@ -21,7 +22,7 @@ const animSchema = new Schema(
     pivot: { type: new Schema({ x: Number, y: Number }, { _id: false }), default: undefined },
     duration: { type: Number, min: 0.1 }, // seconds for one round
     delay: { type: Number }, // seconds, so that neighbours do not move together
-    squash: { type: Number, min: 0.05, max: 1 }, // spin: how flat the record looks from the side
+    squash: { type: Number, min: 0.05, max: 1 }, // spin: how flat the record looks from the side. shut, cover: how low the shell folds when the music is paused
     rest: { type: Number }, // tonearm: angle in degrees when the music is paused
     skew: { type: Number }, // clock: tilt in degrees
     distance: { type: Number, min: 0, max: 100 }, // drift: how far it travels, in percent of the layer's width
