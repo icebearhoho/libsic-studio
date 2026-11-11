@@ -70,28 +70,40 @@ const BUILDERS = {
 };
 
 // Rain is drawn differently from the other effects. Hundreds of separate drops would each be one more thing for the
-// graphics card to move, so the drops are painted once into three see-through sheets (far, middle, near) that slide
-// down forever. Far rain is fine, slow and faint; near rain is long, fast and bright, which gives the rain depth.
+// graphics card to move, so the drops are painted once into two see-through sheets that slide down forever.
+// The back sheet holds the far rain (fine, short, faint) and the middle rain; the near sheet holds a few long, bright
+// streaks and falls faster, which gives the rain depth. Every sheet covers the whole picture and moves on every
+// redraw, so each one costs about as much as a full background: two is the fewest that still shows depth.
 // On top of that a few drops sit on the window glass and run down it now and then.
 const SHEETS = [
-  { name: 'far', seed: 5, count: 90, length: [10, 22], width: 0.7, alpha: [0.18, 0.4] },
-  { name: 'mid', seed: 6, count: 60, length: [22, 42], width: 1, alpha: [0.25, 0.55] },
-  { name: 'near', seed: 7, count: 26, length: [46, 80], width: 1.5, alpha: [0.3, 0.6] },
+  {
+    name: 'back',
+    seed: 5,
+    groups: [
+      { count: 150, length: [7, 15], width: 0.5, alpha: [0.1, 0.24] },
+      { count: 50, length: [24, 46], width: 1.1, alpha: [0.2, 0.45] },
+    ],
+  },
+  { name: 'near', seed: 7, groups: [{ count: 26, length: [46, 80], width: 1.5, alpha: [0.3, 0.6] }] },
 ];
 const TILE = 300; // the sheet is a square picture that repeats; this is its size in drawing units
 const SLANT = 0.16; // the rain leans a little, as if there is some wind
 
 // The repeating picture of one sheet: slanted streaks, each fading in toward its lower end like a falling drop.
-export function rainTile({ seed, count, length, width, alpha }) {
+export function rainTile({ seed, groups }) {
   const r = mulberry32(seed);
-  let lines = '';
-  for (let i = 0; i < count; i++) {
-    const len = between(r, length[0], length[1]);
-    const x = between(r, len * SLANT + 2, TILE - 2); // kept inside the square, so the repeat has no cut drops
-    const y = between(r, 2, TILE - len - 2);
-    lines += `<line x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${(x - len * SLANT).toFixed(1)}" y2="${(y + len).toFixed(1)}" stroke-opacity="${between(r, alpha[0], alpha[1]).toFixed(2)}"/>`;
+  let drawn = '';
+  for (const { count, length, width, alpha } of groups) {
+    let lines = '';
+    for (let i = 0; i < count; i++) {
+      const len = between(r, length[0], length[1]);
+      const x = between(r, len * SLANT + 2, TILE - 2); // kept inside the square, so the repeat has no cut drops
+      const y = between(r, 2, TILE - len - 2);
+      lines += `<line x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${(x - len * SLANT).toFixed(1)}" y2="${(y + len).toFixed(1)}" stroke-opacity="${between(r, alpha[0], alpha[1]).toFixed(2)}"/>`;
+    }
+    drawn += `<g stroke-width="${width}">${lines}</g>`;
   }
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${TILE}" height="${TILE}" viewBox="0 0 ${TILE} ${TILE}"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cfe0ff" stop-opacity="0"/><stop offset="1" stop-color="#dbe8ff"/></linearGradient></defs><g stroke="url(#g)" stroke-width="${width}" stroke-linecap="round">${lines}</g></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${TILE}" height="${TILE}" viewBox="0 0 ${TILE} ${TILE}"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cfe0ff" stop-opacity="0"/><stop offset="1" stop-color="#dbe8ff"/></linearGradient></defs><g stroke="url(#g)" stroke-linecap="round">${drawn}</g></svg>`;
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 }
 

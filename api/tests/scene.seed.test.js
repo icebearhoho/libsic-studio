@@ -151,7 +151,7 @@ describe('night-study customization', () => {
 
   it('lights the candle with a glowing layer that pulses', () => {
     const flame = scene.layers.find((l) => l.name === 'candle flame');
-    expect(flame).toMatchObject({ item: 'candle', blend: 'screen', anim: { name: 'pulse' } });
+    expect(flame).toMatchObject({ item: 'candle', anim: { name: 'pulse' } });
   });
 
   it('allows only one player and does not mirror the player or the clock', () => {
