@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getScenes, getRoom, createRoom, updateRoom, deleteRoom, request, ApiError } from './api.js';
+import { getScenes, getScene, getRoom, createRoom, updateRoom, deleteRoom, request, ApiError } from './api.js';
 
 const reply = (status, body) => Promise.resolve({ ok: status < 400, status, json: () => Promise.resolve(body) });
 
@@ -12,6 +12,14 @@ describe('api', () => {
 
     expect(await getScenes()).toEqual([{ slug: 'a' }]);
     expect(fetchMock.mock.calls[0][0]).toBe('http://localhost:4000/api/scenes');
+  });
+
+  it('getScene asks for one whole scene by its slug', async () => {
+    const fetchMock = vi.fn(() => reply(200, { slug: 'night-study', layers: [] }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    expect(await getScene('night-study')).toEqual({ slug: 'night-study', layers: [] });
+    expect(fetchMock.mock.calls[0][0]).toBe('http://localhost:4000/api/scenes/night-study');
   });
 
   it('throws an ApiError with the status and the message from the API', async () => {

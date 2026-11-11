@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { createRoom, deleteRoom, getRoom, getScenes, updateRoom } from '../api.js';
+import { createRoom, deleteRoom, getRoom, getScene, getScenes, updateRoom } from '../api.js';
 import {
   clearLastRoomCode,
   getMyRooms,
@@ -33,6 +33,12 @@ const IDLE_MS = 4000;
 
 // Stands in for the scene while the scenes are still loading, so the hooks below always have one.
 const NO_SCENE = { slug: '', layers: [], catalog: [], surfaces: [] };
+
+// The API's list of scenes is only a menu (slug, name, description). The layers of a scene are fetched when that
+// scene is opened, and then kept in the list, so going back to a room that was already shown asks nothing.
+const isWhole = (scene) => Array.isArray(scene?.layers);
+const wholeScene = async (scene) => (!scene || isWhole(scene) ? scene : { ...scene, ...(await getScene(scene.slug)) });
+const withScene = (list, whole) => list.map((s) => (s.slug === whole.slug ? whole : s));
 
 // One room on screen. With a `code` it opens that saved room, without one it is a new, unsaved room.
 export default function RoomScreen({ code }) {
@@ -74,6 +80,18 @@ export default function RoomScreen({ code }) {
     }
   };
 
+  // Low power mode stops every movement of the picture (the music keeps playing). It is a preference of the person
+  // looking, for a weak laptop or a long session on battery, so it stays in their browser.
+  const [lowPower, setLowPower] = useState(readLowPower);
+  const toggleLowPower = () => {
+    setLowPower(!lowPower);
+    try {
+      localStorage.setItem(LOW_POWER_KEY, lowPower ? '' : '1');
+    } catch {
+      // not remembered, that is fine
+    }
+  };
+
   // The side bar can be tucked away to see the whole picture. The browser remembers it; a phone starts with it closed.
   const [sidebarOpen, setSidebarOpen] = useState(readSidebarOpen);
   const toggleSidebar = () => {
@@ -103,6 +121,11 @@ export default function RoomScreen({ code }) {
     let cancelled = false;
     setLoadError(null);
     Promise.all([getScenes(), code ? getRoom(code) : Promise.resolve(null)])
+      .then(async ([menu, room]) => {
+        // the one scene that is shown first is fetched whole; the others stay menu lines until they are picked
+        const first = await wholeScene((room && menu.find((s) => s.slug === room.sceneSlug)) || menu[0]);
+        return [first ? withScene(menu, first) : menu, room];
+      })
       .then(([list, room]) => {
         if (cancelled) return;
         setScenes(list);
@@ -195,10 +218,19 @@ export default function RoomScreen({ code }) {
     }
   }
 
-  const chooseScene = (next) => {
+  const showScene = (next) => {
     setSlug(next.slug);
     setSettings(defaultSettings(next));
     setItems(null); // the old objects belong to the old scene
+  };
+  // A scene picked for the first time is fetched whole before it is shown; the room on screen stays until then.
+  const chooseScene = (next) => {
+    if (isWhole(next)) return showScene(next);
+    return run(async () => {
+      const whole = await wholeScene(next);
+      setScenes((list) => withScene(list, whole));
+      showScene(whole);
+    });
   };
 
   // Saves a new room (or a copy of someone else's), remembers its edit key in this browser and opens its page.
@@ -220,7 +252,6 @@ export default function RoomScreen({ code }) {
     });
 
   const removeRoom = () => {
-    if (!window.confirm('Delete this room for everyone? This cannot be undone.')) return;
     run(async () => {
       await deleteRoom(saved.code, editKey);
       removeMyRoom(saved.code);
@@ -255,7 +286,7 @@ export default function RoomScreen({ code }) {
   // The room fills the whole window. Every control is in the side bar at the left.
   return (
     <div ref={view.roomRef} className={`room${idle ? ' idle' : ''}${decorating ? ' decorating' : ''}${sidebarOpen ? ' side-on' : ''}`} style={{ '--zoom': view.zoom, '--drawn-zoom': drawnZoom }} onWheel={view.onWheel}>
-      <SceneStage scene={scene} settings={settings} onSettingsChange={setSettings} items={items} frozen={decorating} onNextTrack={togglePlayer} playing={player.playing} still={view.zoom < MOVE_MIN_ZOOM}>
+      <SceneStage scene={scene} settings={settings} onSettingsChange={setSettings} items={items} frozen={decorating} onNextTrack={togglePlayer} playing={player.playing} still={view.zoom < MOVE_MIN_ZOOM} calm={lowPower && !decorating}>
         {playerPlace === 'object' && hologram /* above the music object: part of the picture, it zooms with it */}
         {decorating && (
           <DecorateOverlay scene={scene} items={editor.items} selectedId={editor.selectedId} onSelect={editor.select} onMove={editor.move} />
@@ -280,6 +311,7 @@ export default function RoomScreen({ code }) {
                 onSaveChanges={saveChanges}
                 onDelete={removeRoom}
                 onCopy={copyLink}
+                onDismissStatus={() => setStatus(null)}
               />
               <MyRooms rooms={myRooms} scenes={scenes} currentCode={code} onForget={forget} />
             </>
@@ -312,6 +344,12 @@ export default function RoomScreen({ code }) {
               </div>
               <h2 className="side-title">Zoom</h2>
               {zoomButtons}
+              <h2 className="side-title">Power</h2>
+              <div className="chip-row">
+                <button type="button" className="chip" aria-pressed={lowPower} title="Stops every movement of the picture, so a weak laptop stays cool. The music keeps playing." onClick={toggleLowPower}>
+                  Low power {lowPower ? 'on' : 'off'}
+                </button>
+              </div>
             </More>
           </>
         )}
@@ -323,6 +361,15 @@ export default function RoomScreen({ code }) {
 const PLAYER_OPEN_KEY = 'libsic.playerOpen';
 const PLAYER_PLACE_KEY = 'libsic.playerPlace';
 const SIDEBAR_KEY = 'libsic.sidebar';
+const LOW_POWER_KEY = 'libsic.lowPower';
+
+function readLowPower() {
+  try {
+    return localStorage.getItem(LOW_POWER_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
 
 function readSidebarOpen() {
   try {

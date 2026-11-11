@@ -17,6 +17,7 @@ import './scene.css';
 //   items            the objects a visitor placed (see placement.js); null shows the scene's default arrangement
 //   frozen           true while decorating: the layers stay still instead of following the mouse
 //   still            true when the whole picture is shown: the layers stay still, the mouse only moves them once zoomed in
+//   calm             true in low power mode: every movement of the scene is stopped, so the graphics card can rest
 //   children         drawn on top of everything inside the stage (the decorate overlay)
 //
 // A layer is a picture with a few optional extras (all set in the scene data):
@@ -30,11 +31,12 @@ import './scene.css';
 //   kind    "clock" draws the live clock instead of a picture
 //   tile    repeats a small picture over the layer (film grain)
 //   item    the layer belongs to an object a visitor can move: it is drawn once for each copy of that object
-export default function SceneStage({ scene, settings, onSettingsChange, onNextTrack, playing = true, items = null, frozen = false, still = false, children }) {
+export default function SceneStage({ scene, settings, onSettingsChange, onNextTrack, playing = true, items = null, frozen = false, still = false, calm = false, children }) {
   const drawList = useMemo(() => buildDrawList(scene, items ?? defaultItems(scene)), [scene, items]);
   const depths = useMemo(() => drawList.map(({ layer }) => layer.depth), [drawList]);
   const { stageRef, layerRef, handlers } = useParallax(depths, !frozen && !still);
   useFramePace(stageRef); // the slow movements are redrawn 30 times per second instead of 60, which halves the drawing work
+  const arrived = usePicturesArrived(stageRef, scene.slug);
 
   // The layers are only worked out again when the scene, the objects or the settings change. Zooming, typing the
   // room name or the buttons fading away redraw the room screen, but not the many layers of the picture.
@@ -116,7 +118,7 @@ export default function SceneStage({ scene, settings, onSettingsChange, onNextTr
   return (
     <div
       ref={stageRef}
-      className={`stage${settings.lightOn ? '' : ' lights-off'}${settings.curtainsClosed ? ' curtains-closed' : ''}${hasLights ? ' has-lights' : ''}${playing ? '' : ' paused'}${!frozen && !still ? ' parallax' : ''}`}
+      className={`stage${settings.lightOn ? '' : ' lights-off'}${settings.curtainsClosed ? ' curtains-closed' : ''}${hasLights ? ' has-lights' : ''}${playing ? '' : ' paused'}${!frozen && !still ? ' parallax' : ''}${arrived ? '' : ' arriving'}${calm ? ' calm' : ''}`}
       data-testid="stage"
       {...handlers}
     >
@@ -125,6 +127,37 @@ export default function SceneStage({ scene, settings, onSettingsChange, onNextTr
       {children}
     </div>
   );
+}
+
+// False while the pictures of a newly opened scene are still coming in, true once they are all there.
+// Until then the stage is kept see-through and then fades in as one picture, instead of the layers popping in one
+// by one. It never waits longer than a few seconds: a slow or missing picture must not hide the room.
+const ARRIVE_WAIT_MS = 4000;
+function usePicturesArrived(stageRef, slug) {
+  const [arrivedSlug, setArrivedSlug] = useState(null);
+  useEffect(() => {
+    const pictures = [...(stageRef.current?.querySelectorAll('.layer img') ?? [])].filter((img) => !img.complete);
+    // typeof createImageBitmap: the test browser never loads pictures, so there is nothing to wait for
+    if (pictures.length === 0 || typeof createImageBitmap !== 'function') return setArrivedSlug(slug);
+    let waiting = pictures.length;
+    const done = () => {
+      waiting -= 1;
+      if (waiting === 0) setArrivedSlug(slug);
+    };
+    for (const img of pictures) {
+      img.addEventListener('load', done, { once: true });
+      img.addEventListener('error', done, { once: true });
+    }
+    const timer = setTimeout(() => setArrivedSlug(slug), ARRIVE_WAIT_MS);
+    return () => {
+      clearTimeout(timer);
+      for (const img of pictures) {
+        img.removeEventListener('load', done);
+        img.removeEventListener('error', done);
+      }
+    };
+  }, [stageRef, slug]);
+  return arrivedSlug === slug;
 }
 
 // Position of a layer that does not cover the whole stage. The picture scales a little around the
