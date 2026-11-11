@@ -10,9 +10,9 @@ module.exports = {
   layers: [
     { name: 'sky', image: '/scenes/golden-loft/l1_sky.webp', depth: 0.05 }, // 0
     { name: 'clouds', image: '/scenes/golden-loft/l2_clouds.webp', depth: 0.08, box: { x: 0.0, y: 7.78, width: 100.0, height: 42.22 }, anim: { name: 'drift', distance: 8, duration: 240 } }, // 1
-    { name: 'rooftops', image: '/scenes/golden-loft/l3_roofs.webp', depth: 0.2, box: { x: 0.0, y: 44.44, width: 100.0, height: 22.22 } }, // 2
+    { name: 'rooftops', image: '/scenes/golden-loft/l3_roofs.webp', depth: 0.2, box: { x: 3.62, y: 44.44, width: 61.92, height: 22.22 } }, // 2
     { name: 'night sky', image: '/scenes/golden-loft/l3b_night.webp', depth: 0.2, box: { x: 0.0, y: 3.33, width: 70.0, height: 63.33 }, night: true }, // 3
-    { name: 'glass sheen', image: '/scenes/golden-loft/l5_glass_sheen.webp', depth: 0.5, box: { x: 6.25, y: 7.33, width: 47.63, height: 52.44 }, blend: 'screen', light: true }, // 4
+    { name: 'glass sheen', image: '/scenes/golden-loft/l5_glass_sheen.webp', depth: 0.5, box: { x: 15.71, y: 7.33, width: 36.13, height: 52.44 }, blend: 'screen', light: true }, // 4
     { name: 'wall', image: '/scenes/golden-loft/l4_wall.webp', depth: 0.5 }, // 5
     { name: 'window frame', image: '/scenes/golden-loft/l6_frame.webp', depth: 0.5, box: { x: 0.0, y: 4.0, width: 69.75, height: 57.33 } }, // 6
     { name: 'shelves and print', image: '/scenes/golden-loft/c_wall_decor.webp', depth: 0.5, box: { x: 68.75, y: 11.11, width: 20.63, height: 48.22 } }, // 7
@@ -24,10 +24,10 @@ module.exports = {
     { name: 'pothos vine 4', image: '/scenes/golden-loft/pothos_vine_4.webp', depth: 0.5, box: { x: 92.88, y: 16.44, width: 7.13, height: 31.56 }, anim: { name: 'sway', amplitude: 2.6, pivot: { x: 17.46, y: 11.97 }, duration: 7.8, delay: -3.6 } }, // 13
     { name: 'left curtain', image: '/scenes/golden-loft/l7_curtain_left.webp', depth: 0.55, box: { x: 0.0, y: 4.0, width: 15.63, height: 69.78 }, curtain: { scale: 2.3, origin: 0 }, anim: { name: 'billow', amplitude: 1.4, pivot: { x: 48.4, y: 0.96 }, duration: 7.5, delay: 0.0 } }, // 14
     { name: 'right curtain', image: '/scenes/golden-loft/l7_curtain_right.webp', depth: 0.55, box: { x: 52.63, y: 4.0, width: 16.13, height: 69.78 }, curtain: { scale: 2.3, origin: 100 }, anim: { name: 'billow', amplitude: 1.4, pivot: { x: 51.55, y: 0.96 }, duration: 5.5, delay: -1.7 } }, // 15
-    { name: 'desk', image: '/scenes/golden-loft/c_desk.webp', depth: 0.9 }, // 16
+    { name: 'desk', image: '/scenes/golden-loft/c_desk.webp', depth: 0.9, box: { x: 0.0, y: 63.78, width: 100.0, height: 36.22 } }, // 16
     { name: 'sun on the desk', image: '/scenes/golden-loft/c_sunwash.webp', depth: 0.9, box: { x: 0.0, y: 64.0, width: 81.25, height: 26.67 }, blend: 'screen', light: true }, // 17
     { name: 'window light on the desk', image: '/scenes/golden-loft/c_sunpattern.webp', depth: 0.9, box: { x: 7.5, y: 64.0, width: 73.75, height: 26.67 }, blend: 'screen', light: true }, // 18
-    { name: 'moonlight', image: '/scenes/golden-loft/n2_moonlight.webp', depth: 0.9, box: { x: 7.5, y: 63.56, width: 78.75, height: 27.78 }, blend: 'screen', night: true }, // 19
+    { name: 'moonlight', image: '/scenes/golden-loft/n2_moonlight.webp', depth: 0.9, box: { x: 14.83, y: 64.15, width: 54.92, height: 26.15 }, blend: 'screen', night: true }, // 19
     { name: 'pothos shadow', image: '/scenes/golden-loft/pothos_shadow.webp', depth: 0.5, box: { x: 90.25, y: 19.11, width: 9.75, height: 41.56 } }, // 20
     { name: 'pothos pot', image: '/scenes/golden-loft/pothos_pot.webp', depth: 0.5, box: { x: 90.63, y: 0.0, width: 7.5, height: 26.67 } }, // 21
     { name: 'pothos vine 1', image: '/scenes/golden-loft/pothos_vine_1.webp', depth: 0.5, box: { x: 88.13, y: 16.22, width: 8.13, height: 43.56 }, anim: { name: 'sway', amplitude: 2.6, pivot: { x: 75.38, y: 9.18 }, duration: 5.7, delay: -0.9 } }, // 22
@@ -35,11 +35,11 @@ module.exports = {
     { name: 'pothos vine 3', image: '/scenes/golden-loft/pothos_vine_3.webp', depth: 0.5, box: { x: 90.38, y: 16.67, width: 6.25, height: 33.78 }, anim: { name: 'sway', amplitude: 2.6, pivot: { x: 62.0, y: 10.53 }, duration: 7.1, delay: -2.7 } }, // 24
     { name: 'pothos vine 4', image: '/scenes/golden-loft/pothos_vine_4.webp', depth: 0.5, box: { x: 92.88, y: 16.44, width: 7.13, height: 31.56 }, anim: { name: 'sway', amplitude: 2.6, pivot: { x: 17.46, y: 11.97 }, duration: 7.8, delay: -3.6 } }, // 25
     { name: 'light beams', image: '/scenes/golden-loft/l8_beams.webp', depth: 0.6, box: { x: 0.0, y: 2.44, width: 100.0, height: 97.56 }, blend: 'screen', light: true }, // 26
-    { name: 'bloom', image: '/scenes/golden-loft/l9_bloom.webp', depth: 0.5, blend: 'screen', light: true }, // 27
+    { name: 'bloom', image: '/scenes/golden-loft/l9_bloom.webp', depth: 0.5, box: { x: 4.0, y: 2.15, width: 88.38, height: 67.63 }, blend: 'screen', light: true }, // 27
     { name: 'foreground drape', image: '/scenes/golden-loft/f1_drape.webp', depth: 1.0, box: { x: 0.0, y: 0.0, width: 7.0, height: 100.0 } }, // 28
-    { name: 'foreground leaves', image: '/scenes/golden-loft/f2_leaves.webp', depth: 1.0, box: { x: 86.25, y: 76.67, width: 13.75, height: 23.33 } }, // 29
+    { name: 'foreground leaves', image: '/scenes/golden-loft/f2_leaves.webp', depth: 1.0, box: { x: 87.21, y: 81.71, width: 12.79, height: 18.29 } }, // 29
     { name: 'night shade', image: '/scenes/golden-loft/n1_nightshade.webp', depth: 0.5, blend: 'multiply', night: true }, // 30
-    { name: 'shelf lamp glow', image: '/scenes/golden-loft/n3_lamp.webp', depth: 0.5, box: { x: 62.5, y: 6.67, width: 37.5, height: 71.11 }, blend: 'screen', night: true, anim: { name: 'pulse', duration: 7 } }, // 31
+    { name: 'shelf lamp glow', image: '/scenes/golden-loft/n3_lamp.webp', depth: 0.5, box: { x: 68.58, y: 14.23, width: 31.42, height: 49.63 }, blend: 'screen', night: true, anim: { name: 'pulse', duration: 7 } }, // 31
     { name: 'vignette', image: '/scenes/golden-loft/l10_grade.webp', depth: 0 }, // 32
     { name: 'film grain', image: '/scenes/golden-loft/l11_grain.webp', depth: 0, tile: 10.67 }, // 33
     { name: 'clock shadow', image: '/scenes/golden-loft/clock_shadow.webp', depth: 0.9, box: { x: 91.19, y: 73.44, width: 8.81, height: 7.89 }, item: 'clock', mirror: false }, // 34

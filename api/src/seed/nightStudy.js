@@ -10,11 +10,11 @@ module.exports = {
   layers: [
     { name: 'sky', image: '/scenes/night-study/l1_sky.webp', depth: 0.05 }, // 0
     { name: 'city', image: '/scenes/night-study/l2_city.webp', depth: 0.2, box: { x: 6.25, y: 3.67, width: 87.5, height: 65.22 } }, // 1
-    { name: 'window glass', image: '/scenes/night-study/l3_glass.webp', depth: 0.5, box: { x: 6.81, y: 0.0, width: 80.25, height: 54.89 } }, // 2
+    { name: 'window glass', image: '/scenes/night-study/l3_glass.webp', depth: 0.5, box: { x: 6.81, y: 30.67, width: 80.25, height: 24.22 } }, // 2
     { name: 'water trickle 1', image: '/scenes/night-study/c_drop_1.webp', depth: 0.5, box: { x: 26.88, y: 14.44, width: 0.75, height: 7.33 }, glide: { to: { x: 0.8, y: 409.1 }, duration: 38, delay: -6, from: { x: 0, y: 0 } } }, // 3
     { name: 'water trickle 2', image: '/scenes/night-study/c_drop_2.webp', depth: 0.5, box: { x: 68.12, y: 11.11, width: 0.75, height: 7.33 }, glide: { to: { x: 0.1, y: 454.5 }, duration: 46, delay: -21, from: { x: 0, y: 0 } } }, // 4
     { name: 'water trickle 3', image: '/scenes/night-study/c_drop_3.webp', depth: 0.5, box: { x: 83.12, y: 18.89, width: 0.75, height: 7.33 }, glide: { to: { x: -1.4, y: 348.5 }, duration: 34, delay: -15, from: { x: 0, y: 0 } } }, // 5
-    { name: 'lamp reflection in the glass', image: '/scenes/night-study/c_glass_lamp_ghost.webp', depth: 0.5, box: { x: 64.5, y: 28.67, width: 16.12, height: 50.33 }, blend: 'screen', light: true }, // 6
+    { name: 'lamp reflection in the glass', image: '/scenes/night-study/c_glass_lamp_ghost.webp', depth: 0.5, box: { x: 64.5, y: 28.67, width: 16.12, height: 23.44 }, blend: 'screen', light: true }, // 6
     { name: 'room reflection in the glass', image: '/scenes/night-study/c_glass_room_ghost.webp', depth: 0.5, box: { x: 8.81, y: 14.44, width: 77.0, height: 9.0 }, blend: 'screen' }, // 7
     { name: 'window frame', image: '/scenes/night-study/l4_frame.webp', depth: 0.5, box: { x: 0.0, y: 0.0, width: 100.0, height: 75.0 } }, // 8
     { name: 'lamp light on the wall', image: '/scenes/night-study/c_wall_lamp.webp', depth: 0.5, box: { x: 0.0, y: 0.0, width: 100.0, height: 75.0 }, blend: 'screen', light: true }, // 9
@@ -81,13 +81,13 @@ module.exports = {
     { name: 'foreground books', image: '/scenes/night-study/c_fg_books.webp', depth: 1.0, box: { x: 86.56, y: 84.89, width: 13.44, height: 15.11 } }, // 70
     { name: 'foreground books light', image: '/scenes/night-study/c_fg_books_lit.webp', depth: 1.0, box: { x: 86.56, y: 84.89, width: 13.44, height: 15.11 }, blend: 'screen', light: true }, // 71
     { name: 'night books', image: '/scenes/night-study/c_fg_books_night.webp', depth: 1.0, box: { x: 86.56, y: 84.89, width: 13.44, height: 15.11 }, blend: 'screen', night: true }, // 72
-    { name: 'city glow', image: '/scenes/night-study/l6_bloom.webp', depth: 0.5, box: { x: 3.12, y: 14.44, width: 94.38, height: 78.44 }, blend: 'screen' }, // 73
+    { name: 'city glow', image: '/scenes/night-study/l6_bloom.webp', depth: 0.5, box: { x: 5.37, y: 14.44, width: 84.63, height: 39.33 }, blend: 'screen' }, // 73
     { name: 'lamp glow', image: '/scenes/night-study/c_glow_lamp.webp', depth: 0.9, box: { x: 54.94, y: 22.22, width: 42.19, height: 60.11 }, blend: 'screen', light: true }, // 74
     { name: 'dust motes in the lamp beam', image: '/scenes/night-study/c_dust.webp', depth: 0.95, box: { x: 64.25, y: 41.67, width: 14.69, height: 31.33 }, blend: 'screen', light: true, glide: { to: { x: 1.0, y: -1.8 }, duration: 64, delay: 0, pingpong: true, from: { x: 0, y: 0 } } }, // 75
     { name: 'display glow', image: '/scenes/night-study/c_glow_oled.webp', depth: 0.9, box: { x: 53.62, y: 74.67, width: 19.56, height: 11.22 }, blend: 'screen', anim: { name: 'pulse', duration: 3.2 }, item: 'player' }, // 76
     { name: 'clock glow', image: '/scenes/night-study/c_glow_clock.webp', depth: 0.9, box: { x: 16.19, y: 62.33, width: 16.25, height: 18.44 }, blend: 'screen', anim: { name: 'pulse', duration: 6.0 }, item: 'clock' }, // 77
     { name: 'fairy light glow', image: '/scenes/night-study/c_glow_fairy.webp', depth: 0.5, box: { x: 6.31, y: 2.22, width: 81.44, height: 11.89 }, blend: 'screen', anim: { name: 'pulse', duration: 2.6 } }, // 78
-    { name: 'night city glow', image: '/scenes/night-study/c_night_glow.webp', depth: 0.5, box: { x: 6.25, y: 4.44, width: 87.5, height: 66.67 }, blend: 'screen', night: true }, // 79
+    { name: 'night city glow', image: '/scenes/night-study/c_night_glow.webp', depth: 0.5, box: { x: 6.25, y: 15.77, width: 82.62, height: 36.45 }, blend: 'screen', night: true }, // 79
     { name: 'vignette', image: '/scenes/night-study/l7_grade.webp', depth: 0 }, // 80
     { name: 'film grain', image: '/scenes/night-study/l7_grain.webp', depth: 0, tile: 21.33 }, // 81
     { name: 'cactus shadow', image: '/scenes/night-study/d_cactus_shadow.webp', depth: 0.9, box: { x: 3.12, y: 75.22, width: 21.94, height: 20.33 }, item: 'cactus', mirror: false }, // 82

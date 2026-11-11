@@ -96,12 +96,12 @@ describe('the real answers match the documentation', () => {
   });
 
   it('GET /api/scenes/{slug}: found and not found', async () => {
-    expectDocumented(await request(app).get('/api/scenes/moon-base'), '/api/scenes/{slug}', 'get');
+    expectDocumented(await request(app).get('/api/scenes/golden-loft'), '/api/scenes/{slug}', 'get');
     expectDocumented(await request(app).get('/api/scenes/nope'), '/api/scenes/{slug}', 'get');
   });
 
   it('the whole room life: create, open, change, delete', async () => {
-    const created = await request(app).post('/api/rooms').send({ name: 'Docs test', sceneSlug: 'rainy-cafe', settings: { effect: 'rain' } });
+    const created = await request(app).post('/api/rooms').send({ name: 'Docs test', sceneSlug: 'night-study', settings: { effect: 'rain' } });
     expectDocumented(created, '/api/rooms', 'post');
     const { code } = created.body.room;
     const key = created.body.editKey;
@@ -125,7 +125,7 @@ describe('the real answers match the documentation', () => {
   });
 
   it('the error answers of the room addresses', async () => {
-    const created = await request(app).post('/api/rooms').send({ sceneSlug: 'rainy-cafe' });
+    const created = await request(app).post('/api/rooms').send({ sceneSlug: 'night-study' });
     const { code } = created.body.room;
 
     expectDocumented(await request(app).post('/api/rooms').send({ sceneSlug: 'atlantis' }), '/api/rooms', 'post');
