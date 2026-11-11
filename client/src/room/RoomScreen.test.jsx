@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import App from '../App.jsx';
@@ -7,13 +7,11 @@ import * as api from '../api.js';
 import { getLastRoomCode, getMyRooms, saveMyRoom, setLastRoomCode } from '../myRooms.js';
 import { decorScene, otherScene, savedRoom, scene } from '../test/fixtures.js';
 
-// The room and effect lists are menus: open one by its button, then pick an item from it.
-async function openMenu(name) {
-  await userEvent.click(screen.getByRole('button', { name }));
-}
-async function pick(menu, item) {
-  await openMenu(menu);
-  await userEvent.click(screen.getByRole('button', { name: item }));
+// The rooms and the effects are groups of buttons in the side bar: pick one by the name of its group and its own name.
+const inGroup = (group, item) => within(screen.getByRole('group', { name: group })).getByRole('button', { name: item });
+const more = () => userEvent.click(screen.getByRole('button', { name: /more settings/i })); // unfolds the zoom buttons and the player place
+async function pick(group, item) {
+  await userEvent.click(inGroup(group, item));
 }
 
 const notFound = () => new api.ApiError('Room not found', 404);
@@ -52,6 +50,30 @@ describe('the hologram player', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Radio' }));
     expect(holo(container)).not.toHaveClass('holo-open');
+  });
+
+  it('closes on Escape and remembers in the browser that it was open', async () => {
+    const { container } = renderAt('/new');
+    await screen.findByTestId('stage');
+    await userEvent.click(screen.getByRole('button', { name: 'Radio' }));
+    expect(localStorage.getItem('libsic.playerOpen')).toBe('1');
+
+    await userEvent.keyboard('{Escape}');
+    expect(holo(container)).not.toHaveClass('holo-open');
+    expect(localStorage.getItem('libsic.playerOpen')).toBe('');
+  });
+
+  it('plays and pauses with the space bar: the record stops while paused', async () => {
+    vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue();
+    vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {});
+    renderAt('/new');
+    const stage = await screen.findByTestId('stage');
+    expect(stage).toHaveClass('paused');
+
+    await userEvent.keyboard(' ');
+    expect(stage).not.toHaveClass('paused');
+    await userEvent.keyboard(' ');
+    expect(stage).toHaveClass('paused');
   });
 });
 
@@ -96,7 +118,7 @@ describe('a new room (/new)', () => {
 
     await pick('Effects', 'Snow');
     expect(container.querySelector('[data-effect="snow"]')).not.toBeNull();
-    await pick('Effects', 'None');
+    await pick('Effects', 'Snow'); // pressing the effect that is on turns it off
     expect(container.querySelector('[data-effect]')).toBeNull();
 
     await userEvent.click(screen.getByRole('button', { name: 'Light on' }));
@@ -104,25 +126,42 @@ describe('a new room (/new)', () => {
   });
 });
 
-describe('the room and effect menus', () => {
-  it('open on click and close after a pick, on Escape and on a click elsewhere', async () => {
+describe('the side bar', () => {
+  it('holds the logo, the rooms and every other control', async () => {
     renderAt('/new');
     await screen.findByTestId('stage');
-    const roomMenu = () => screen.queryByRole('group', { name: 'Switch room' });
+    const bar = within(screen.getByRole('complementary', { name: 'Room controls' }));
 
-    expect(roomMenu()).toBeNull();
-    await openMenu('Switch room');
-    expect(roomMenu()).not.toBeNull();
-    await userEvent.keyboard('{Escape}');
-    expect(roomMenu()).toBeNull();
+    expect(bar.getByRole('link', { name: /libsic studio/i })).toHaveAttribute('href', '/new');
+    expect(inGroup('Switch room', 'Test Room')).toHaveAttribute('aria-pressed', 'true');
+    expect(inGroup('Switch room', 'Other Room')).toHaveAttribute('aria-pressed', 'false');
+    await more();
+    for (const name of ['Light on', 'Save room', 'Zoom in', /my rooms/i]) expect(bar.getByRole('button', { name })).toBeInTheDocument();
+    expect(bar.getByLabelText('Room name')).toBeInTheDocument();
+  });
 
-    await openMenu('Switch room');
-    await userEvent.click(screen.getByTestId('stage'));
-    expect(roomMenu()).toBeNull();
+  it('can be tucked away and brought back, and the browser remembers it', async () => {
+    renderAt('/new');
+    await screen.findByTestId('stage');
 
-    await openMenu('Switch room');
-    await userEvent.click(screen.getByRole('button', { name: 'Test Room' }));
-    expect(roomMenu()).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Hide the side bar' }));
+    expect(screen.queryByRole('complementary')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Save room' })).toBeNull();
+    expect(localStorage.getItem('libsic.sidebar')).toBe('closed');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Show the side bar' }));
+    expect(screen.getByRole('complementary')).toBeInTheDocument();
+    expect(localStorage.getItem('libsic.sidebar')).toBe('open');
+  });
+
+  it('moves the music player when another place is picked', async () => {
+    const { container } = renderAt('/new');
+    await screen.findByTestId('stage');
+    expect(container.querySelector('.holo')).toHaveClass('holo-at-center');
+
+    await more();
+    await pick('Player place', 'Top of the screen');
+    expect(container.querySelector('.holo')).toHaveClass('holo-at-top', 'holo-open');
   });
 });
 
@@ -132,6 +171,7 @@ describe('zoom', () => {
   it('the buttons zoom in and out, and Fit shows the whole room', async () => {
     const { container } = renderAt('/new');
     await screen.findByTestId('stage');
+    await more();
     const start = zoomOf(container);
 
     await userEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
@@ -145,6 +185,7 @@ describe('zoom', () => {
   it('the plus and minus keys zoom, and the choice is remembered in this browser', async () => {
     const { container, unmount } = renderAt('/new');
     await screen.findByTestId('stage');
+    await more();
     await userEvent.click(screen.getByRole('button', { name: 'Show the whole room' }));
 
     await userEvent.keyboard('+');
@@ -154,12 +195,14 @@ describe('zoom', () => {
 
     const again = renderAt('/new');
     await screen.findByTestId('stage');
+    await more();
     expect(zoomOf(again.container)).toBeCloseTo(zoomed);
   });
 
   it('does not zoom while the visitor types in the room name', async () => {
     const { container } = renderAt('/new');
     await screen.findByTestId('stage');
+    await more();
     await userEvent.click(screen.getByRole('button', { name: 'Show the whole room' }));
 
     await userEvent.type(screen.getByLabelText('Room name'), '++');
@@ -226,10 +269,8 @@ describe('opening a saved room (/r/:code)', () => {
     renderAt(`/r/${savedRoom.code}`);
     const stage = await screen.findByTestId('stage');
 
-    await openMenu('Switch room');
-    expect(screen.getByRole('button', { name: 'Other Room' })).toHaveAttribute('aria-pressed', 'true');
-    await openMenu('Effects');
-    expect(screen.getByRole('button', { name: 'Stars' })).toHaveAttribute('aria-pressed', 'true');
+    expect(inGroup('Switch room', 'Other Room')).toHaveAttribute('aria-pressed', 'true');
+    expect(inGroup('Effects', 'Stars')).toHaveAttribute('aria-pressed', 'true');
     expect(stage).toHaveClass('lights-off');
     expect(screen.getByLabelText('Room name')).toHaveValue('Study');
     expect(getLastRoomCode()).toBe(savedRoom.code);
@@ -333,7 +374,7 @@ describe('editing your own room', () => {
 
 describe('My rooms', () => {
   it('lists the rooms saved in this browser and opens one when clicked', async () => {
-    saveMyRoom({ code: 'zzz99999', editKey: 'k', name: 'Other one', sceneSlug: 'rainy-cafe' });
+    saveMyRoom({ code: 'zzz99999', editKey: 'k', name: 'Other one', sceneSlug: 'night-study' });
     ownRoom();
     renderAt('/new');
     await screen.findByTestId('stage');
@@ -424,7 +465,8 @@ describe('decorating the room', () => {
     expect(screen.getByRole('button', { name: 'Reset room' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add Mug' })).toBeInTheDocument();
-    for (const name of ['Switch room', 'Save room', 'Decorate']) expect(screen.queryByRole('button', { name })).toBeNull();
+    for (const name of ['Save room', 'Decorate', 'Light on']) expect(screen.queryByRole('button', { name })).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Switch room' })).toBeNull();
   });
 
   it('keeps the click areas of the room switched off while decorating', async () => {

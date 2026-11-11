@@ -42,10 +42,12 @@ body {
   background: #000;
 }
 .room {
-  /* The picture is as wide as the window allows (--fit) times the zoom. --pan-x and --pan-y are set by the
-     mouse (see useRoomView.js) so that a zoomed picture can be looked around. */
+  /* The picture is laid out once, as wide as the window allows (--fit). Zooming does not resize it: the finished
+     picture is enlarged as one piece (scale in the transform below). Resizing would make the browser redraw every
+     layer at each zoom step, and layers that were not ready yet showed up black for a moment.
+     --pan-x and --pan-y are set by the mouse (see useRoomView.js) so that a zoomed picture can be looked around. */
   --fit: min(100vw, calc(100vh * 16 / 9));
-  --stage-w: calc(var(--fit) * var(--zoom, 1));
+  --stage-w: calc(var(--fit) * var(--zoom, 1)); /* how wide the picture looks on screen */
 }
 @supports (height: 100dvh) {
   .room { --fit: min(100vw, calc(100dvh * 16 / 9)); }
@@ -54,11 +56,15 @@ body {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: var(--stage-w);
-  height: calc(var(--stage-w) * 9 / 16);
+  width: var(--fit);
+  height: calc(var(--fit) * 9 / 16);
   aspect-ratio: auto;
   margin: 0;
-  transform: translate(calc(-50% + var(--pan-x, 0px)), calc(-50% + var(--pan-y, 0px)));
+  /* Every layer is drawn 6% bigger than the picture (see .layer). In a window a little wider or taller than 16:9
+     that spare edge is shown instead of black bars; anything further out stays cut off. */
+  overflow: visible;
+  clip-path: inset(-3%);
+  transform: translate(calc(-50% + var(--pan-x, 0px)), calc(-50% + var(--pan-y, 0px))) scale(var(--drawn-zoom, 1)); /* --drawn-zoom: see useDrawnZoom */
   transition: transform 0.35s ease-out;
 }
 @media (prefers-reduced-motion: reduce) { .room .stage { transition: none; } }
@@ -68,107 +74,181 @@ body {
   .room .stage { left: calc(50% - 0.1 * var(--stage-w)); }
 }
 
-/* The layer of buttons. It lets the mouse through everywhere except on the buttons themselves,
-   so the room still follows the mouse and its objects can still be clicked. */
-.hud {
-  --gap: max(16px, env(safe-area-inset-left, 0px));
+/* The side bar: the one place for every button (see Sidebar.jsx). It floats over the left of the picture as dark glass.
+   The rest of the window lets the mouse through, so the room still follows the mouse and its objects can be clicked. */
+.sidebar {
+  --pad: 14px;
   position: absolute;
-  inset: 0;
   z-index: 5;
-  pointer-events: none;
-}
-.hud > * { position: absolute; pointer-events: auto; }
-.hud-tl { left: var(--gap); top: max(16px, env(safe-area-inset-top, 0px)); display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
-.hud-tr { right: var(--gap); top: max(16px, env(safe-area-inset-top, 0px)); display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: flex-start; gap: 8px; max-width: calc(100vw - 2 * var(--gap) - 250px); }
-.hud-tc { left: 50%; top: max(16px, env(safe-area-inset-top, 0px)); transform: translateX(-50%); }
-.hud-mr { right: var(--gap); top: 50%; transform: translateY(-50%); }
-.hud-bl { left: var(--gap); bottom: max(14px, env(safe-area-inset-bottom, 0px)); }
-.hud-br { right: var(--gap); bottom: max(14px, env(safe-area-inset-bottom, 0px)); width: min(26rem, calc(100vw - 2 * var(--gap))); }
-
-/* After a few quiet seconds the buttons fade away, except the brand, the room name and the CD player. */
-.hud-fade { transition: opacity 0.7s ease; }
-.room.idle .hud-fade:not(:hover):not(:focus-within) { opacity: 0.08; }
-@media (prefers-reduced-motion: reduce) { .hud-fade { transition: none; } }
-
-.brand,
-.room-name,
-.controls,
-.savebar,
-.my-rooms > .chip {
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-.brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 16px 7px 10px;
+  left: max(12px, env(safe-area-inset-left, 0px));
+  top: max(12px, env(safe-area-inset-top, 0px));
+  bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  width: min(268px, calc(100vw - 24px));
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--glass);
-  color: var(--text);
-  text-decoration: none;
+  border-radius: 22px;
+  /* No frosted-glass blur behind the bar: blurring a moving, layered picture is heavy work for a graphics card. */
+  background: linear-gradient(180deg, rgba(22, 25, 38, 0.94), rgba(10, 12, 20, 0.95));
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  animation: side-in 0.28s ease-out;
 }
-.brand-name { font-weight: 650; letter-spacing: 0.04em; font-size: 16px; }
+@keyframes side-in { from { opacity: 0; transform: translateX(-14px); } }
+.side-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: var(--pad);
+  border-bottom: 1px solid var(--line);
+}
+.side-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px var(--pad) var(--pad);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+.side-section { padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+.side-section:last-child { border-bottom: 0; padding-bottom: 0; }
+.side-title {
+  margin: 0 0 9px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip-group { display: contents; }
+/* Pinned at the bottom of the bar: the name of the room, saving and My rooms */
+.side-foot { display: flex; flex-direction: column; gap: 8px; padding: 12px var(--pad) var(--pad); border-top: 1px solid var(--line); }
+.side-foot .my-rooms { margin-top: 0; }
+.side-foot .my-rooms-panel { max-height: 30vh; overflow-y: auto; }
+/* "More settings": a quiet line that unfolds the rarely used settings */
+.side-more {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.side-more:hover { color: var(--text); }
+.side-more:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.side-more-body { padding-top: 12px; }
+.side-more-body .side-title:not(:first-child) { margin-top: 14px; }
+.chip-row + .chip-row { margin-top: 8px; }
+
+/* After a few quiet seconds the side bar fades away, so the room can run on a second screen without clutter. */
+.side-fade { transition: opacity 0.7s ease; }
+.room.idle .side-fade:not(:hover):not(:focus-within) { opacity: 0.06; }
+@media (prefers-reduced-motion: reduce) { .side-fade { transition: none; } .sidebar { animation: none; } }
+
+.brand { display: flex; align-items: center; gap: 11px; min-width: 0; color: var(--text); text-decoration: none; }
+.brand-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
+.brand-name { font-weight: 650; letter-spacing: 0.04em; font-size: 17px; }
+.brand-tag { color: var(--muted); font-size: 11px; letter-spacing: 0.08em; }
 .brand-disc {
-  width: 22px;
-  height: 22px;
+  flex: none;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background:
-    radial-gradient(circle, var(--accent) 0 18%, #14161f 19% 24%, transparent 25%),
+    radial-gradient(circle, var(--accent) 0 16%, #14161f 17% 21%, transparent 22%),
+    conic-gradient(from 20deg, rgba(255, 255, 255, 0.16), transparent 18% 50%, rgba(255, 255, 255, 0.12) 56%, transparent 72%),
     repeating-radial-gradient(circle, #1d2130 0 2px, #0c0e15 2px 4px);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18), 0 0 14px rgba(232, 184, 106, 0.35);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18), 0 0 16px rgba(232, 184, 106, 0.35);
 }
-.room-name {
-  width: min(16rem, 60vw);
-  padding: 7px 14px;
+.brand:hover .brand-disc { animation: disc-spin 3s linear infinite; }
+@keyframes disc-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .brand:hover .brand-disc { animation: none; } }
+.brand:focus-visible, .side-hide:focus-visible, .side-open:focus-visible, .room-card:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+.side-hide, .side-open {
+  flex: none;
+  display: grid;
+  place-items: center;
   border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--glass);
+  border-radius: 50%;
+  color: var(--text);
+  cursor: pointer;
+}
+.side-hide { width: 30px; height: 30px; background: rgba(255, 255, 255, 0.04); font-size: 20px; line-height: 1; padding: 0 2px 3px 0; }
+.side-hide:hover, .side-open:hover { border-color: var(--accent); }
+/* The side bar tucked away: only the round logo is left, and it brings the bar back. */
+.side-open {
+  position: absolute;
+  z-index: 5;
+  left: max(14px, env(safe-area-inset-left, 0px));
+  top: max(14px, env(safe-area-inset-top, 0px));
+  width: 50px;
+  height: 50px;
+  padding: 0;
+  background: rgba(16, 19, 29, 0.9);
+}
+
+.room-name {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(8, 10, 16, 0.5);
   color: var(--text);
   font: inherit;
   font-size: 15px;
 }
 .room-name:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
 
-/* Bottom left: switch room, effects, light */
-.zoom {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 22px;
-  background: var(--glass);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+/* While decorating with the bar open, the picture moves over next to the bar, so every object can be reached. */
+.room.decorating.side-on {
+  --side: 292px;
+  --fit: min(calc(100vw - var(--side)), calc(100vh * 16 / 9));
 }
-.zoom .chip { min-width: 44px; padding: 6px 8px; text-align: center; }
-.controls {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--glass);
-}
-.menu { position: relative; }
-.menu-list {
-  position: absolute;
-  left: 0;
-  bottom: calc(100% + 10px);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 100%;
-  padding: 8px;
+.room.decorating.side-on .stage { left: calc(50% + var(--side) / 2); }
+@media (max-width: 700px) { .room.decorating.side-on { --side: 0px; } }
+
+/* The rooms, each a small picture with its name on it */
+.room-list { display: flex; flex-direction: column; gap: 8px; }
+.room-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 5.6;
+  padding: 0;
+  overflow: hidden;
   border: 1px solid #34343f;
   border-radius: 14px;
-  background: #14161f;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  background: linear-gradient(135deg, #1b2030, #0d0f17);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s;
 }
-.menu-list .chip { text-align: left; white-space: nowrap; }
+.room-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.72; transition: opacity 0.2s, transform 0.4s; }
+.room-card span {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 18px 11px 8px;
+  background: linear-gradient(180deg, transparent, rgba(5, 6, 10, 0.86));
+  font-size: 14px;
+  font-weight: 550;
+  text-align: left;
+}
+.room-card:hover { border-color: var(--accent); }
+.room-card:hover img { opacity: 1; transform: scale(1.04); }
+.room-card[aria-pressed='true'] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 18px rgba(232, 184, 106, 0.22); }
+.room-card[aria-pressed='true'] img { opacity: 1; }
+.room-card[aria-pressed='true'] span { color: var(--accent); }
+
+.zoom { display: flex; gap: 6px; }
+.zoom .chip { flex: 1; padding: 6px 8px; text-align: center; }
 
 .chip {
   padding: 6px 13px;
@@ -182,7 +262,7 @@ body {
   transition: border-color 0.15s, background 0.15s, color 0.15s;
 }
 .chip:hover { border-color: var(--accent); }
-.chip:focus-visible, .cd-btn:focus-visible, .link-button:focus-visible, .link-field input:focus-visible {
+.chip:focus-visible, .hp-btn:focus-visible, .hp input:focus-visible, .link-button:focus-visible, .link-field input:focus-visible {
   outline: 2px solid var(--teal);
   outline-offset: 2px;
 }
@@ -226,22 +306,13 @@ a.chip { text-decoration: none; display: inline-block; }
 .hit.selected { border-color: var(--accent); background: rgba(232, 184, 106, 0.12); }
 .hit:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
 
-.tray {
-  max-width: min(36rem, calc(100vw - 640px)); /* the room name is at the left and the buttons at the right */
-  padding: 8px;
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  background: var(--glass);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-.tray ul { display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; overflow-x: auto; }
+.tray ul { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 0; padding: 0; list-style: none; }
 .tray-item {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  width: 78px;
+  width: 100%;
   padding: 6px 4px;
   border: 1px solid #34343f;
   border-radius: 12px;
@@ -256,39 +327,28 @@ a.chip { text-decoration: none; display: inline-block; }
 .tray-item:disabled { opacity: 0.4; cursor: not-allowed; }
 .tray-note { margin: 6px 4px 0; color: var(--muted); font-size: 12px; }
 
-.item-toolbar {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: 11rem;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: var(--glass);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  font-size: 14px;
-}
+.item-toolbar { display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
 .item-toolbar label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 13px; }
 .item-toolbar input[type='range'] { width: 100%; accent-color: var(--accent); }
 
-/* The music player as a hologram floating above the player object in the scene (see Hologram.jsx).
+/* The music player as a hologram floating above the player object in the scene (see Hologram.jsx and HoloPlayer.jsx).
+   It has no box: thin glowing writing, a hair-thin progress line and small outlined buttons, like a title projected in the air.
    Everything is sized in em, and the font size follows the picture width, so it scales with the zoom. */
 .holo {
   --h: var(--holo-h, 188);
-  --holo-line: hsl(var(--h) 100% 72% / 0.6);
-  --holo-soft: hsl(var(--h) 100% 70% / 0.14);
-  --holo-glow: hsl(var(--h) 100% 65% / 0.45);
-  --holo-text: hsl(var(--h) 100% 86%);
+  --holo-text: hsl(var(--h) 100% 92%);
+  --holo-accent: hsl(var(--h) 100% 72%);
+  --holo-glow: hsl(var(--h) 100% 60% / 0.55);
+  --holo-shade: hsl(var(--h) 60% 6% / 0.5); /* a soft dark halo that keeps the writing readable on a bright picture */
   position: absolute;
   left: var(--hx);
   top: var(--hy);
   z-index: 6;
-  width: 32em;
-  font-size: clamp(7px, calc(var(--stage-w) * 0.0086), 17px);
+  width: 27em;
+  font-size: max(6px, calc(var(--fit) * 0.0086)); /* part of the picture, so the zoom enlarges it with the rest */
   transform: translate(-50%, calc(-100% - 3.4em));
   pointer-events: none;
-  /* switched off until the music object is clicked: the panel folds down into the beam and fades out */
+  /* switched off until the music object is clicked: it fades out and the beam folds back into the player */
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.4s ease, visibility 0s linear 0.4s;
@@ -296,299 +356,247 @@ a.chip { text-decoration: none; display: inline-block; }
 .holo-open {
   opacity: 1;
   visibility: visible;
-  transition: opacity 0.4s ease;
+  transition: opacity 1.2s ease;
 }
-.holo .holo-panel,
-.holo .holo-beam {
-  transform-origin: 50% 100%;
-  transition: scale 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+/* In the middle or at the top of the window: not part of the picture, so it is placed on the window itself, it is
+   bigger, and it has no light beam. The size follows the window width. */
+.holo-at-center,
+.holo-at-top {
+  left: 50%;
+  top: 50%;
+  width: 30em;
+  font-size: clamp(9px, 1.45vw, 26px);
+  transform: translate(-50%, -50%);
 }
-.holo .holo-beam { transform-origin: 50% 0; }
-.holo:not(.holo-open) .holo-panel { scale: 1 0.15; }
-.holo:not(.holo-open) .holo-beam { scale: 1 0; }
+.holo-at-top {
+  top: max(5.5rem, 9vh);
+  transform: translate(-50%, 0);
+}
+/* Left alone for a while, the hologram dims with the other buttons so the room stays calm. */
+.room.idle .holo-open { opacity: 0.6; }
 .holo-panel {
   position: relative;
-  padding: 1em 1.1em;
-  border: 1px solid var(--holo-line);
-  border-radius: 0.9em;
-  background:
-    linear-gradient(180deg, hsl(var(--h) 100% 70% / 0.26), hsl(var(--h) 100% 55% / 0.1) 70%),
-    hsl(var(--h) 70% 9% / 0.58);
-  box-shadow: 0 0 2.4em var(--holo-glow), inset 0 0 1.6em var(--holo-soft);
-  backdrop-filter: blur(1.5px) saturate(1.2);
+  padding: 1.2em 1em 0.6em;
+  background: radial-gradient(ellipse closest-side, var(--holo-shade), transparent); /* fades out before the edge, so no box shows */
   color: var(--holo-text);
-  animation: holo-float 7s ease-in-out infinite, holo-flicker 5.3s steps(1) infinite;
+  text-align: center;
+  text-shadow: 0 0 0.5em var(--holo-glow), 0 0.06em 0.3em var(--holo-shade);
+  animation: holo-float 7s ease-in-out infinite;
+}
+/* Only the sliders and buttons catch the mouse, so the objects of the room behind the writing can still be clicked. */
+.hp-progress,
+.hp-controls {
   pointer-events: auto;
 }
-/* fine scan lines that drift upward, like a projected picture */
-.holo-panel::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: repeating-linear-gradient(0deg, hsl(var(--h) 100% 80% / 0.1) 0 1px, transparent 1px 0.3em);
-  background-size: 100% 0.9em;
-  animation: holo-scan 3s linear infinite;
-  pointer-events: none;
-}
-/* bright corner marks */
-.holo-panel::after {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  background:
-    linear-gradient(var(--holo-text), var(--holo-text)) top left / 1.4em 2px no-repeat,
-    linear-gradient(var(--holo-text), var(--holo-text)) top left / 2px 1.4em no-repeat,
-    linear-gradient(var(--holo-text), var(--holo-text)) top right / 1.4em 2px no-repeat,
-    linear-gradient(var(--holo-text), var(--holo-text)) top right / 2px 1.4em no-repeat,
-    linear-gradient(var(--holo-text), var(--holo-text)) bottom left / 1.4em 2px no-repeat,
-    linear-gradient(var(--holo-text), var(--holo-text)) bottom left / 2px 1.4em no-repeat,
-    linear-gradient(var(--holo-text), var(--holo-text)) bottom right / 1.4em 2px no-repeat,
-    linear-gradient(var(--holo-text), var(--holo-text)) bottom right / 2px 1.4em no-repeat;
-  filter: drop-shadow(0 0 0.3em var(--holo-glow));
-  pointer-events: none;
-}
-/* the light beam from the player up to the panel, and the glowing ring where it starts */
+/* switching on: the picture flickers into place like a projector warming up */
+.holo-open .holo-panel { animation: holo-on 0.55s steps(1) both, holo-float 7s ease-in-out 0.55s infinite; }
+/* the light beam from the player up to the writing, and the glowing ring where it starts */
 .holo-beam {
   position: absolute;
   left: 50%;
   top: 100%;
-  width: 17em;
+  width: 15em;
   height: 3.4em;
   transform: translateX(-50%);
-  clip-path: polygon(0 0, 100% 0, 62% 100%, 38% 100%);
-  background: linear-gradient(180deg, hsl(var(--h) 100% 70% / 0.5), hsl(var(--h) 100% 70% / 0.08));
+  transform-origin: 50% 100%;
+  clip-path: polygon(0 0, 100% 0, 58% 100%, 42% 100%);
+  background: linear-gradient(180deg, transparent, hsl(var(--h) 100% 72% / 0.32));
+  transition: scale 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
   animation: holo-beam 4.2s ease-in-out infinite;
 }
+.holo:not(.holo-open) .holo-beam { scale: 1 0; }
 .holo-emitter {
   position: absolute;
   left: 50%;
   top: calc(100% + 3.1em);
-  width: 6em;
-  height: 1.3em;
+  width: 5em;
+  height: 1.1em;
   transform: translateX(-50%);
   border-radius: 50%;
-  border: 1px solid var(--holo-line);
-  background: radial-gradient(ellipse, hsl(var(--h) 100% 80% / 0.6), transparent 70%);
+  border: 1px solid hsl(var(--h) 100% 78% / 0.6);
+  background: radial-gradient(ellipse, hsl(var(--h) 100% 80% / 0.55), transparent 70%);
   box-shadow: 0 0 1.2em var(--holo-glow);
 }
 
-.cd-slot {
+/* The writing: a big thin title, a small line under it and the time of day. */
+.hp p { margin: 0; white-space: nowrap; }
+.hp-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 3.1em;
+  font-weight: 200;
+  line-height: 1.15;
+  letter-spacing: 0.34em;
+  text-indent: 0.34em; /* the spacing after the last letter would push the word off centre */
+  text-transform: uppercase;
+}
+/* a track title is longer than a day name, so it is written a little smaller and tighter */
+.hp-title.hp-track {
+  font-size: 2.2em;
+  font-weight: 300;
+  line-height: 1.6;
+  letter-spacing: 0.2em;
+  text-indent: 0.2em;
+}
+.hp-sub {
+  margin-top: 0.5em !important;
+  font-size: 1.2em;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-indent: 0.22em;
+  text-transform: uppercase;
+}
+.hp-time {
+  margin-top: 0.7em !important;
+  font-size: 1.55em;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+}
+.hp-progress {
   display: flex;
   align-items: center;
   gap: 0.8em;
+  margin: 1.1em auto 0;
+  width: 86%;
+  font-size: 0.85em;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
-.cd-disc {
-  flex: none;
-  width: 3.3em;
-  height: 3.3em;
+.hp-progress input { flex: 1; min-width: 0; }
+.hp-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5em;
+  margin-top: 0.5em;
+}
+.hp-btn {
+  display: grid;
+  place-items: center;
+  width: 2.4em;
+  height: 2.4em;
+  padding: 0;
+  border: 0;
   border-radius: 50%;
-  background:
-    radial-gradient(circle, transparent 0 11%, var(--holo-line) 12% 14%, transparent 15% 34%, hsl(var(--h) 100% 80% / 0.35) 35% 36%, transparent 37% 60%, hsl(var(--h) 100% 80% / 0.3) 61% 62%, transparent 63%),
-    conic-gradient(from 20deg, hsl(var(--h) 100% 70% / 0.55), hsl(var(--h) 100% 90% / 0.1), hsl(var(--h) 100% 70% / 0.5), hsl(var(--h) 100% 90% / 0.1), hsl(var(--h) 100% 70% / 0.55));
-  border: 1px solid var(--holo-line);
-  box-shadow: 0 0 0.9em var(--holo-glow);
-  animation: holo-spin 9s linear infinite;
+  background: none;
+  color: var(--holo-accent);
+  cursor: pointer;
+  transition: scale 0.15s ease, filter 0.15s ease;
 }
-.cd-display {
+.hp-btn svg {
+  width: 1.5em;
+  height: 1.5em;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 0.25em var(--holo-glow)) drop-shadow(0 0.05em 0.15em var(--holo-shade));
+}
+.hp-prev svg { transform: scaleX(-1); }
+.hp-play svg { width: 1.7em; height: 1.7em; }
+.hp-btn:hover { scale: 1.18; filter: brightness(1.25); }
+.hp-btn:active { scale: 0.94; }
+/* small sound bars: they dance while music plays and rest as dots when it is paused */
+.hp-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 0.22em;
+  width: 5em;
+  height: 1.3em;
+}
+.hp-bars i {
+  width: 0.18em;
+  height: 100%;
+  border-radius: 0.1em;
+  background: var(--holo-text);
+  box-shadow: 0 0 0.4em var(--holo-glow);
+  transform: scaleY(0.14);
+  transform-origin: 50% 100%;
+  transition: transform 0.4s ease;
+}
+.hp-playing .hp-bars i { animation: hp-bar 1.1s ease-in-out infinite alternate; }
+.hp-playing .hp-bars i:nth-child(2) { animation-duration: 0.8s; animation-delay: -0.4s; }
+.hp-playing .hp-bars i:nth-child(3) { animation-duration: 1.3s; animation-delay: -0.9s; }
+.hp-playing .hp-bars i:nth-child(4) { animation-duration: 0.95s; animation-delay: -0.2s; }
+.hp-volume { width: 5em; }
+/* The two sliders (track position and volume) are drawn as a hair-thin line with a small round handle. */
+.hp input[type='range'] {
+  --rest: hsl(0 0% 100% / 0.32);
+  height: 1.4em;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: none;
+  cursor: pointer;
+}
+.hp input[type='range']:disabled { cursor: default; }
+.hp input[type='range']::-webkit-slider-runnable-track {
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(to right, var(--holo-text) var(--done, 0%), var(--rest) var(--done, 0%));
+  box-shadow: 0 0 0.4em var(--holo-shade);
+}
+.hp input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 0.75em;
+  height: 0.75em;
+  margin-top: calc(1px - 0.375em);
+  border-radius: 50%;
+  background: var(--holo-text);
+  box-shadow: 0 0 0.5em var(--holo-glow);
+}
+.hp input[type='range']::-moz-range-track {
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(to right, var(--holo-text) var(--done, 0%), var(--rest) var(--done, 0%));
+}
+.hp input[type='range']::-moz-range-thumb {
+  width: 0.75em;
+  height: 0.75em;
+  border: 0;
+  border-radius: 50%;
+  background: var(--holo-text);
+  box-shadow: 0 0 0.5em var(--holo-glow);
+}
+
+/* Each room gives the hologram its own colours. The rules above are the plain cyan version. */
+/* Room 1, the rainy night study: warm lamp light, the buttons glow like the clock's LEDs. */
+.holo-night-study {
+  --holo-text: hsl(38 100% 90%);
+  --holo-accent: hsl(28 100% 64%);
+  --holo-glow: hsl(28 100% 55% / 0.6);
+  --holo-shade: hsl(226 50% 5% / 0.55);
+}
+/* Room 2, the golden hour loft: white writing in the sun with orange buttons, on a warm shade so it reads on the bright wall. */
+.holo-golden-loft {
+  --holo-text: #fffdf6;
+  --holo-accent: hsl(24 100% 56%);
+  --holo-glow: hsl(36 100% 70% / 0.45);
+  --holo-shade: hsl(22 55% 20% / 0.66);
+}
+/* Room 3, the clam cove: pearl-white writing with a sea-green glow. */
+.holo-underwater-nook {
+  --holo-text: hsl(176 100% 94%);
+  --holo-accent: hsl(168 100% 76%);
+  --holo-glow: hsl(176 100% 58% / 0.6);
+  --holo-shade: hsl(205 80% 10% / 0.5);
+}
+@keyframes holo-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -0.35em; } }
+@keyframes holo-beam { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
+@keyframes holo-on { 0% { opacity: 0; } 18% { opacity: 0.7; } 30% { opacity: 0.15; } 46% { opacity: 0.9; } 58% { opacity: 0.4; } 72%, 100% { opacity: 1; } }
+@keyframes hp-bar { from { transform: scaleY(0.2); } to { transform: scaleY(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .holo-panel, .holo-open .holo-panel, .holo-beam, .hp-playing .hp-bars i { animation: none !important; }
+  .holo, .holo .holo-beam { transition: none; }
+}
+.savebar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.link-field { display: flex; align-items: center; gap: 6px; width: 100%; }
+.link-field input {
   flex: 1;
   min-width: 0;
-  display: flex;
-  justify-content: space-between;
-  gap: 1em;
-  padding: 0.55em 0.6em;
-  border-bottom: 1px solid var(--holo-line);
-  color: var(--holo-text);
-  font: 600 1.15em/1 ui-monospace, 'SFMono-Regular', Menlo, monospace;
-  letter-spacing: 0.14em;
-  white-space: nowrap;
-  text-shadow: 0 0 0.5em var(--holo-glow), 0 0 0.12em var(--holo-text);
-}
-.cd-buttons { display: flex; gap: 0.5em; }
-.cd-btn {
-  padding: 0.45em 0.8em;
-  border: 1px solid var(--holo-line);
-  border-radius: 0.45em;
-  background: var(--holo-soft);
-  color: var(--holo-text);
-  font-size: 1.1em;
-  text-shadow: 0 0 0.4em var(--holo-glow);
-}
-.cd-btn:not(:disabled):hover { box-shadow: 0 0 0.9em var(--holo-glow); background: hsl(var(--h) 100% 70% / 0.28); }
-.cd-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-/* Each room dresses the hologram in its own material. The base rules above are the plain cyan version. */
-
-/* Room 1, the rainy night study: frosted window glass lit from below by the lamp, with raindrops running down it,
-   soft city-light bokeh behind the writing, and the writing glowing like the clock's LEDs. */
-.holo-night-study {
-  --holo-line: hsl(34 95% 62% / 0.7);
-  --holo-soft: hsl(34 100% 60% / 0.12);
-  --holo-glow: hsl(30 100% 55% / 0.4);
-  --holo-text: hsl(36 100% 78%);
-}
-.holo-night-study .holo-panel {
-  border: 1px solid transparent;
-  border-radius: 0.7em;
-  background:
-    linear-gradient(0deg, hsl(32 100% 55% / 0.24), transparent 55%) padding-box,
-    linear-gradient(180deg, hsl(222 45% 16% / 0.55), hsl(226 45% 8% / 0.68)) padding-box,
-    linear-gradient(180deg, hsl(212 75% 72% / 0.55), hsl(34 95% 62% / 0.85)) border-box;
-  backdrop-filter: blur(2.5px) saturate(1.3);
-  box-shadow: 0 0 2.2em hsl(30 100% 55% / 0.35), inset 0 -1.2em 1.6em -0.8em hsl(32 100% 60% / 0.3);
-}
-/* raindrops: thin streaks and a few round drops that slide down the glass */
-.holo-night-study .holo-panel::before {
-  background:
-    radial-gradient(circle at 14% 22%, hsl(205 90% 90% / 0.55) 0 0.14em, transparent 0.24em),
-    radial-gradient(circle at 41% 63%, hsl(205 90% 90% / 0.5) 0 0.12em, transparent 0.22em),
-    radial-gradient(circle at 78% 35%, hsl(205 90% 90% / 0.55) 0 0.15em, transparent 0.25em),
-    radial-gradient(circle at 92% 78%, hsl(205 90% 90% / 0.45) 0 0.11em, transparent 0.2em),
-    repeating-linear-gradient(97deg, transparent 0 1.7em, hsl(205 80% 88% / 0.12) 1.7em calc(1.7em + 1px), transparent calc(1.7em + 1px) 3.4em);
-  background-size: 100% 200%, 100% 200%, 100% 200%, 100% 200%, 100% 7em;
-  animation: holo-drops 9s linear infinite;
-}
-/* blurred city lights behind the writing */
-.holo-night-study .holo-panel::after {
-  inset: 0;
-  border-radius: inherit;
-  background:
-    radial-gradient(circle at 8% 30%, hsl(34 100% 65% / 0.45) 0 0.7em, transparent 0.9em),
-    radial-gradient(circle at 30% 80%, hsl(330 90% 70% / 0.32) 0 0.6em, transparent 0.8em),
-    radial-gradient(circle at 62% 22%, hsl(190 90% 70% / 0.3) 0 0.55em, transparent 0.75em),
-    radial-gradient(circle at 90% 70%, hsl(40 100% 65% / 0.4) 0 0.75em, transparent 0.95em);
-  filter: blur(0.35em);
-  opacity: 0.85;
-}
-.holo-night-study .cd-display {
-  color: hsl(30 100% 62%);
-  letter-spacing: 0.2em;
-  text-shadow: 0 0 0.4em hsl(24 100% 55% / 0.95), 0 0 1em hsl(24 100% 50% / 0.55);
-  border-bottom-color: hsl(30 100% 60% / 0.55);
-}
-.holo-night-study .cd-btn { border-color: hsl(34 90% 60% / 0.5); background: hsl(222 40% 14% / 0.55); color: hsl(36 100% 80%); }
-.holo-night-study .cd-disc {
-  background:
-    radial-gradient(circle, hsl(30 95% 60% / 0.95) 0 16%, hsl(24 40% 6%) 17% 19%, transparent 20%),
-    repeating-radial-gradient(circle, hsl(24 30% 8%) 0 2px, hsl(30 25% 16%) 2px 3px);
-  border-color: hsl(30 60% 40% / 0.6);
-}
-.holo-night-study .holo-beam {
-  background: linear-gradient(180deg, hsl(32 100% 70% / 0.42), hsl(32 100% 60% / 0.04));
-}
-.holo-night-study .holo-emitter {
-  background: radial-gradient(ellipse, hsl(34 100% 75% / 0.7), transparent 70%);
-}
-
-/* Room 2, the golden hour loft: a sunlit card, warm cream glass with brown ink and gold dust in the beam. */
-.holo-golden-loft {
-  --holo-line: hsl(38 85% 48% / 0.85);
-  --holo-soft: hsl(40 100% 70% / 0.25);
-  --holo-glow: hsl(40 100% 62% / 0.6);
-  --holo-text: #5a3912;
-}
-.holo-golden-loft .holo-panel {
-  border-radius: 1em;
-  background: linear-gradient(180deg, hsl(48 100% 96% / 0.9), hsl(38 90% 82% / 0.82));
-  backdrop-filter: blur(2px);
-  box-shadow: 0 0 2.6em hsl(42 100% 62% / 0.65), inset 0 0 1.4em hsl(45 100% 98% / 0.7);
-}
-.holo-golden-loft .holo-panel::before {
-  background:
-    radial-gradient(circle at 12% 30%, hsl(45 100% 98% / 0.9) 0 0.12em, transparent 0.2em),
-    radial-gradient(circle at 48% 72%, hsl(45 100% 98% / 0.8) 0 0.1em, transparent 0.18em),
-    radial-gradient(circle at 83% 22%, hsl(45 100% 98% / 0.9) 0 0.12em, transparent 0.2em),
-    radial-gradient(circle at 66% 62%, hsl(45 100% 98% / 0.7) 0 0.1em, transparent 0.18em);
-  animation: holo-twinkle 4s ease-in-out infinite;
-}
-.holo-golden-loft .holo-panel::after { opacity: 0.55; }
-.holo-golden-loft .cd-display { text-shadow: 0 0 0.35em hsl(45 100% 95% / 0.9); }
-.holo-golden-loft .cd-btn { background: hsl(45 100% 97% / 0.6); }
-.holo-golden-loft .cd-disc {
-  background:
-    radial-gradient(circle, #fff6dc 0 11%, hsl(38 80% 50%) 12% 14%, transparent 15%),
-    conic-gradient(from 20deg, #ffe7a8, #fff6dc, #f3c36b, #fff0c4, #ffe7a8);
-}
-.holo-golden-loft .holo-beam {
-  background: linear-gradient(180deg, hsl(44 100% 78% / 0.7), hsl(44 100% 80% / 0.08));
-}
-
-/* Room 3, the clam cove: a bioluminescent bubble with a pearly rim, and bubbles rising up the beam from the clam. */
-.holo-underwater-nook {
-  --holo-line: hsl(176 100% 78% / 0.55);
-  --holo-soft: hsl(176 100% 70% / 0.14);
-  --holo-glow: hsl(176 100% 60% / 0.5);
-  --holo-text: hsl(176 100% 90%);
-}
-.holo-underwater-nook .holo-panel {
-  border: 1px solid transparent;
-  border-radius: 2em;
-  background:
-    radial-gradient(ellipse at 30% 0%, hsl(176 100% 80% / 0.28), transparent 60%) padding-box,
-    linear-gradient(180deg, hsl(186 80% 30% / 0.5), hsl(210 80% 14% / 0.62)) padding-box,
-    conic-gradient(from 30deg, #a8fff2, #ffc4ea, #fff3b0, #a8d4ff, #a8fff2) border-box;
-  box-shadow: 0 0 2.4em hsl(176 100% 55% / 0.45), inset 0 0 1.6em hsl(176 100% 80% / 0.14);
-}
-.holo-underwater-nook .holo-panel::before {
-  background:
-    radial-gradient(circle at 10% 70%, hsl(176 100% 92% / 0.5) 0 0.18em, transparent 0.26em),
-    radial-gradient(circle at 36% 30%, hsl(176 100% 92% / 0.4) 0 0.12em, transparent 0.2em),
-    radial-gradient(circle at 74% 78%, hsl(176 100% 92% / 0.45) 0 0.16em, transparent 0.24em),
-    radial-gradient(circle at 90% 25%, hsl(176 100% 92% / 0.4) 0 0.12em, transparent 0.2em);
-  background-size: 100% 200%;
-  animation: holo-bubbles 6s linear infinite;
-}
-.holo-underwater-nook .holo-panel::after { display: none; }
-.holo-underwater-nook .cd-disc {
-  background:
-    radial-gradient(circle, transparent 0 14%, hsl(176 100% 90% / 0.6) 15% 17%, transparent 18%),
-    radial-gradient(circle at 35% 30%, #fff 0 8%, transparent 30%),
-    conic-gradient(from 0deg, #a8fff2, #ffc4ea, #fff3b0, #a8d4ff, #a8fff2);
-  opacity: 0.9;
-}
-.holo-underwater-nook .holo-beam {
-  background:
-    radial-gradient(circle at 40% 80%, hsl(176 100% 92% / 0.9) 0 0.15em, transparent 0.25em),
-    radial-gradient(circle at 62% 45%, hsl(176 100% 92% / 0.8) 0 0.12em, transparent 0.22em),
-    radial-gradient(circle at 50% 15%, hsl(176 100% 92% / 0.8) 0 0.18em, transparent 0.28em),
-    linear-gradient(180deg, hsl(176 100% 70% / 0.3), hsl(176 100% 70% / 0.03));
-  background-size: 100% 200%, 100% 200%, 100% 200%, 100% 100%;
-  animation: holo-bubbles 5s linear infinite;
-}
-.holo-underwater-nook .holo-emitter {
-  background: radial-gradient(ellipse, hsl(176 100% 90% / 0.8), hsl(176 100% 70% / 0.2) 60%, transparent 75%);
-}
-
-@keyframes holo-drops { to { background-position-y: 100%, 100%, 100%, 100%, 7em; } }
-@keyframes holo-twinkle { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
-@keyframes holo-bubbles { to { background-position-y: -100%, -100%, -100%, 0; } }
-
-@keyframes holo-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -0.35em; } }
-@keyframes holo-scan { to { background-position: 0 -0.9em; } }
-@keyframes holo-beam { 0%, 100% { opacity: 0.75; } 50% { opacity: 1; } }
-@keyframes holo-spin { to { transform: rotate(360deg); } }
-/* a rare, tiny flicker */
-@keyframes holo-flicker { 0%, 93%, 96%, 100% { opacity: 1; } 94% { opacity: 0.82; } 95% { opacity: 0.94; } }
-@media (prefers-reduced-motion: reduce) {
-  .holo-panel, .holo-panel::before, .holo-beam, .cd-disc { animation: none !important; }
-  .holo, .holo .holo-panel, .holo .holo-beam { transition: none; }
-}
-
-.savebar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 22px;
-  background: var(--glass);
-}
-.link-field { display: flex; align-items: center; gap: 6px; }
-.link-field input {
-  width: 11rem;
   padding: 6px 10px;
   border: 1px solid #34343f;
   border-radius: 999px;
@@ -618,21 +626,8 @@ a.chip { text-decoration: none; display: inline-block; }
 .status.error { color: #ff8f88; }
 @media (prefers-reduced-motion: reduce) { .status.ok { animation-duration: 0.01s; } }
 
-.my-rooms { position: relative; }
-.my-rooms-panel {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 10px);
-  z-index: 30;
-  width: min(300px, calc(100vw - 32px));
-  max-height: 60vh;
-  overflow: auto;
-  padding: 12px;
-  border: 1px solid #34343f;
-  border-radius: 12px;
-  background: #14161f;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
-}
+.my-rooms { margin-top: 8px; }
+.my-rooms-panel { margin-top: 8px; padding: 10px 12px; border: 1px solid #34343f; border-radius: 12px; background: rgba(8, 10, 16, 0.5); }
 .my-rooms-panel ul { margin: 0 0 10px; padding: 0; list-style: none; }
 .my-rooms-panel li { display: flex; align-items: baseline; gap: 8px; padding: 6px 0; }
 .my-rooms-panel li a { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -651,16 +646,3 @@ a.chip { text-decoration: none; display: inline-block; }
 .link-button:hover { color: #ff8f88; }
 
 @keyframes toast-out { to { opacity: 0; visibility: hidden; } }
-
-/* Narrow screens: the buttons use the full width and stack toward the bottom */
-@media (max-width: 700px) {
-  .hud-tr { left: var(--gap); max-width: none; justify-content: flex-start; top: calc(max(16px, env(safe-area-inset-top, 0px)) + 96px); }
-  .hud-bl { bottom: calc(max(14px, env(safe-area-inset-bottom, 0px)) + 66px); }
-  .link-field input { width: 8rem; }
-}
-
-/* Not enough room along the top for the objects to add: they go above the CD player instead. */
-@media (max-width: 1000px) {
-  .hud-tc { left: var(--gap); top: auto; bottom: calc(max(14px, env(safe-area-inset-bottom, 0px)) + 66px); transform: none; }
-  .tray { max-width: calc(100vw - 2 * var(--gap)); }
-}

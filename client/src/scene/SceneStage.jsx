@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import Clock from './Clock.jsx';
 import Effect from './Effects.jsx';
+import { useFramePace } from './framePace.js';
 import { useParallax } from './parallax.js';
 import { buildDrawList, defaultItems } from './placement.js';
 import { applyObjectAction } from './sceneSettings.js';
@@ -25,7 +26,7 @@ import './scene.css';
 //   night   true for a picture that only shows at night, when the lights are off (the night sky in a window)
 //   glide   a slow trip across the scene that repeats (a fish, a drifting jellyfish)
 //   curtain a curtain: it is drawn wider while settings.curtainsClosed is true
-//   anim    a small movement: spin, tonearm, sway, steam, pulse, breathe, drift, flick, billow, throb or sweep
+//   anim    a small movement: spin, tonearm, sway, steam, pulse, breathe, drift, flick, billow, throb, sweep, shut or cover
 //   kind    "clock" draws the live clock instead of a picture
 //   tile    repeats a small picture over the layer (film grain)
 //   item    the layer belongs to an object a visitor can move: it is drawn once for each copy of that object
@@ -33,86 +34,93 @@ export default function SceneStage({ scene, settings, onSettingsChange, onNextTr
   const drawList = useMemo(() => buildDrawList(scene, items ?? defaultItems(scene)), [scene, items]);
   const depths = useMemo(() => drawList.map(({ layer }) => layer.depth), [drawList]);
   const { stageRef, layerRef, handlers } = useParallax(depths, !frozen && !still);
+  useFramePace(stageRef); // the slow movements are redrawn 30 times per second instead of 60, which halves the drawing work
 
-  function handleClick(object) {
-    if (object.action.type === 'nextTrack') onNextTrack?.(object);
-    else onSettingsChange(applyObjectAction(settings, object));
-  }
+  // The layers are only worked out again when the scene, the objects or the settings change. Zooming, typing the
+  // room name or the buttons fading away redraw the room screen, but not the many layers of the picture.
+  const layers = useMemo(() => {
+    function handleClick(object) {
+      if (object.action.type === 'nextTrack') onNextTrack?.(object);
+      else onSettingsChange(applyObjectAction(settings, object));
+    }
 
-  const isOn = (object) =>
-    (object.action.type === 'toggleLight' && settings.lightOn) ||
-    (object.action.type === 'toggleCurtains' && settings.curtainsClosed) ||
-    (object.action.type === 'toggleEffect' && settings.effect === object.action.effect);
+    const isOn = (object) =>
+      (object.action.type === 'toggleLight' && settings.lightOn) ||
+      (object.action.type === 'toggleCurtains' && settings.curtainsClosed) ||
+      (object.action.type === 'toggleEffect' && settings.effect === object.action.effect);
+
+    const content = (layer, flip) =>
+      flip ? (
+        <div className="flip" style={{ transform: 'scaleX(-1)' }}>
+          <LayerContent layer={layer} />
+        </div>
+      ) : (
+        <LayerContent layer={layer} />
+      );
+
+    const hotspots = (templateIndex) =>
+      scene.objects
+        .filter((object) => object.layer === templateIndex)
+        .map((object) => (
+          <button
+            key={object.key}
+            type="button"
+            className={`hotspot${isOn(object) ? ' is-on' : ''}`}
+            style={{
+              left: `${object.x}%`,
+              top: `${object.y}%`,
+              width: `${object.width}%`,
+              height: `${object.height}%`,
+            }}
+            aria-label={object.label}
+            disabled={frozen}
+            onClick={() => handleClick(object)}
+          >
+            <span className="hotspot-label">{object.label}</span>
+          </button>
+        ));
+
+    return drawList.map(({ key, layer, box, templateIndex, itemId, flip }, i) => (
+      <div
+        key={key}
+        ref={layerRef(i)}
+        className="layer"
+        style={layerStyle(box)}
+        data-item={itemId}
+        data-light={layer.light ? 'true' : undefined}
+        data-night={layer.night ? 'true' : undefined}
+        data-blend={layer.blend && layer.blend !== 'normal' ? layer.blend : undefined}
+      >
+        {layer.glide ? (
+          <div className={`glide${layer.glide.mirror ? ' glide-mirror' : ''}${layer.glide.pingpong ? ' glide-pingpong' : ''}`} style={glideStyle(layer.glide)}>
+            {content(layer, flip)}
+          </div>
+        ) : layer.curtain ? (
+          <div className="curtain" style={{ transformOrigin: `${layer.curtain.origin}% 0%`, '--closed-scale': layer.curtain.scale }}>
+            {content(layer, flip)}
+            {hotspots(templateIndex)}
+          </div>
+        ) : (
+          <>
+            {content(layer, flip)}
+            {templateIndex === scene.effectLayer && <Effect name={settings.effect} />}
+            {hotspots(templateIndex)}
+          </>
+        )}
+      </div>
+    ));
+  }, [scene, drawList, settings, frozen, layerRef, onNextTrack, onSettingsChange]);
 
   const hasLights = drawList.some(({ layer }) => layer.light || layer.night);
-
-  const content = (layer, flip) =>
-    flip ? (
-      <div className="flip" style={{ transform: 'scaleX(-1)' }}>
-        <LayerContent layer={layer} />
-      </div>
-    ) : (
-      <LayerContent layer={layer} />
-    );
-
-  const hotspots = (templateIndex) =>
-    scene.objects
-      .filter((object) => object.layer === templateIndex)
-      .map((object) => (
-        <button
-          key={object.key}
-          type="button"
-          className={`hotspot${isOn(object) ? ' is-on' : ''}`}
-          style={{
-            left: `${object.x}%`,
-            top: `${object.y}%`,
-            width: `${object.width}%`,
-            height: `${object.height}%`,
-          }}
-          aria-label={object.label}
-          disabled={frozen}
-          onClick={() => handleClick(object)}
-        >
-          <span className="hotspot-label">{object.label}</span>
-        </button>
-      ));
 
   return (
     <div
       ref={stageRef}
-      className={`stage${settings.lightOn ? '' : ' lights-off'}${settings.curtainsClosed ? ' curtains-closed' : ''}${hasLights ? ' has-lights' : ''}${playing ? '' : ' paused'}`}
+      className={`stage${settings.lightOn ? '' : ' lights-off'}${settings.curtainsClosed ? ' curtains-closed' : ''}${hasLights ? ' has-lights' : ''}${playing ? '' : ' paused'}${!frozen && !still ? ' parallax' : ''}`}
       data-testid="stage"
       {...handlers}
     >
-      {drawList.map(({ key, layer, box, templateIndex, itemId, flip }, i) => (
-        <div
-          key={key}
-          ref={layerRef(i)}
-          className="layer"
-          style={layerStyle(box)}
-          data-item={itemId}
-          data-light={layer.light ? 'true' : undefined}
-          data-night={layer.night ? 'true' : undefined}
-          data-blend={layer.blend && layer.blend !== 'normal' ? layer.blend : undefined}
-        >
-          {layer.glide ? (
-            <div className={`glide${layer.glide.mirror ? ' glide-mirror' : ''}${layer.glide.pingpong ? ' glide-pingpong' : ''}`} style={glideStyle(layer.glide)}>
-              {content(layer, flip)}
-            </div>
-          ) : layer.curtain ? (
-            <div className="curtain" style={{ transformOrigin: `${layer.curtain.origin}% 0%`, '--closed-scale': layer.curtain.scale }}>
-              {content(layer, flip)}
-              {hotspots(templateIndex)}
-            </div>
-          ) : (
-            <>
-              {content(layer, flip)}
-              {templateIndex === scene.effectLayer && <Effect name={settings.effect} />}
-              {hotspots(templateIndex)}
-            </>
-          )}
-        </div>
-      ))}
+      {layers}
       <div className="dim" style={scene.nightDim != null ? { '--dim-alpha': scene.nightDim } : undefined} />
       {children}
     </div>
@@ -139,7 +147,7 @@ function glideStyle({ from, to, duration, delay }) {
   return { '--fx': `${from.x}%`, '--fy': `${from.y}%`, '--tx': `${to.x}%`, '--ty': `${to.y}%`, '--dur': `${duration}s`, '--delay': `${delay ?? 0}s` };
 }
 
-function LayerContent({ layer }) {
+const LayerContent = memo(function LayerContent({ layer }) {
   if (layer.kind === 'clock') {
     // The clock face in the picture is turned a little, so the digits are tilted to match.
     const skew = layer.anim?.skew ? { transform: `skewY(${layer.anim.skew}deg)`, transformOrigin: '0 0' } : undefined;
@@ -153,7 +161,7 @@ function LayerContent({ layer }) {
     const style = { backgroundImage: `url(${layer.image})`, backgroundSize: `${layer.tile}% auto` };
     return <div className="tiled" style={style} />;
   }
-  const picture = <img src={layer.image} alt="" draggable={false} />;
+  const picture = <LayerPicture src={layer.image} />;
   const anim = layer.anim;
   if (!anim?.name) return picture;
   const style = { '--dur': `${anim.duration ?? 6}s`, '--delay': `${anim.delay ?? 0}s` };
@@ -180,5 +188,51 @@ function LayerContent({ layer }) {
     <div className={`anim anim-${anim.name}`} style={style}>
       {picture}
     </div>
+  );
+});
+
+// The picture of one layer.
+//
+// A plain <img> is enough to show it, but the browser then keeps a second copy of every layer, redrawn at the size
+// of the screen. On a 4K screen that is about 230 MB of graphics memory for one room, and the copies are redrawn
+// when the picture is zoomed. So, once the file has arrived, the picture is handed to the graphics card one time,
+// at its own size (an ImageBitmap shown by a <canvas>), and the <img> steps aside. The card then only moves and
+// enlarges that one sheet. Where the browser cannot do this, the <img> simply stays.
+function LayerPicture({ src }) {
+  const imgRef = useRef(null);
+  const canvasRef = useRef(null);
+  const [handedOver, setHandedOver] = useState(false);
+
+  useEffect(() => {
+    setHandedOver(false);
+    const img = imgRef.current;
+    const canvas = canvasRef.current;
+    if (!img || !canvas || typeof createImageBitmap !== 'function') return undefined;
+    let cancelled = false;
+    const handOver = () => {
+      createImageBitmap(img)
+        .then((bitmap) => {
+          const sheet = cancelled ? null : canvas.getContext('bitmaprenderer');
+          if (!sheet) return bitmap.close();
+          canvas.width = bitmap.width;
+          canvas.height = bitmap.height;
+          sheet.transferFromImageBitmap(bitmap);
+          setHandedOver(true);
+        })
+        .catch(() => {}); // a broken picture: the <img> stays and shows nothing, as before
+    };
+    if (img.complete && img.naturalWidth) handOver();
+    else img.addEventListener('load', handOver, { once: true });
+    return () => {
+      cancelled = true;
+      img.removeEventListener('load', handOver);
+    };
+  }, [src]);
+
+  return (
+    <>
+      <img ref={imgRef} src={src} alt="" draggable={false} decoding="sync" className={handedOver ? 'stepped-aside' : undefined} />
+      <canvas ref={canvasRef} className={handedOver ? 'sheet' : 'sheet stepped-aside'} aria-hidden="true" />
+    </>
   );
 }

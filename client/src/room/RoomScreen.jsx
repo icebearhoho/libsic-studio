@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { createRoom, deleteRoom, getRoom, getScenes, updateRoom } from '../api.js';
 import {
@@ -13,16 +13,19 @@ import { MOVE_MIN_ZOOM } from './view.js';
 import SceneStage from '../scene/SceneStage.jsx';
 import { itemsEqual } from '../scene/itemsEdit.js';
 import { defaultSettings } from '../scene/sceneSettings.js';
-import CdSlot from './CdSlot.jsx';
-import Hologram from './Hologram.jsx';
+import HoloPlayer from './HoloPlayer.jsx';
+import Hologram, { HOLO_PLACES } from './Hologram.jsx';
 import Controls from './Controls.jsx';
 import DecorateHud from './DecorateHud.jsx';
 import DecorateOverlay from './DecorateOverlay.jsx';
 import MyRooms from './MyRooms.jsx';
 import SaveBar, { RoomNameField } from './SaveBar.jsx';
+import Sidebar, { More, Section } from './Sidebar.jsx';
 import { useIdle } from './useIdle.js';
 import { useItemsEditor } from './useItemsEditor.js';
-import { useRoomView } from './useRoomView.js';
+import { TEST_CD } from './testCd.js';
+import { usePlayer } from './usePlayer.js';
+import { useDrawnZoom, useRoomView } from './useRoomView.js';
 import ZoomControls from './ZoomControls.jsx';
 
 // How long the room waits without any movement before its buttons fade away.
@@ -47,9 +50,40 @@ export default function RoomScreen({ code }) {
   const [items, setItems] = useState(null); // the objects the visitor placed; null = the scene's default arrangement
   const [decorating, setDecorating] = useState(false);
   // The hologram player is hidden at first. Clicking the music object in the room shows it, and clicking again hides it.
-  // (The music side can also start or skip a track from the same click when it is connected.)
-  const [playerOpen, setPlayerOpen] = useState(false);
-  const togglePlayer = () => setPlayerOpen((open) => !open);
+  // The browser remembers whether it was left open.
+  const [playerOpen, setPlayerOpen] = useState(readPlayerOpen);
+  const togglePlayer = useCallback(() => setPlayerOpen((open) => !open), []);
+  const player = usePlayer(TEST_CD); // the real CDs will come from the API (the music side); until then a small test CD
+  useEffect(() => {
+    try {
+      localStorage.setItem(PLAYER_OPEN_KEY, playerOpen ? '1' : '');
+    } catch {
+      // not remembered, that is fine
+    }
+  }, [playerOpen]);
+  usePlayerShortcuts(player, playerOpen, setPlayerOpen);
+  // Where the hologram floats is a preference of the person looking, like the zoom: it stays in their browser.
+  const [playerPlace, setPlayerPlace] = useState(readPlayerPlace);
+  const choosePlayerPlace = (place) => {
+    setPlayerPlace(place);
+    setPlayerOpen(true); // show it, so the change can be seen
+    try {
+      localStorage.setItem(PLAYER_PLACE_KEY, place);
+    } catch {
+      // not remembered, that is fine
+    }
+  };
+
+  // The side bar can be tucked away to see the whole picture. The browser remembers it; a phone starts with it closed.
+  const [sidebarOpen, setSidebarOpen] = useState(readSidebarOpen);
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+    try {
+      localStorage.setItem(SIDEBAR_KEY, sidebarOpen ? 'closed' : 'open');
+    } catch {
+      // not remembered, that is fine
+    }
+  };
 
   const scene = scenes?.find((s) => s.slug === slug) || scenes?.[0] || NO_SCENE;
   const editor = useItemsEditor(scene, items, setItems);
@@ -57,6 +91,7 @@ export default function RoomScreen({ code }) {
 
   const idle = useIdle(IDLE_MS); // the buttons fade away when nobody is using the room
   const view = useRoomView({ panning: !decorating }); // zoom level and panning of the picture
+  const drawnZoom = useDrawnZoom(view.zoom, scene.slug);
 
   const [myRooms, setMyRooms] = useState(getMyRooms);
   const [busy, setBusy] = useState(false);
@@ -209,37 +244,31 @@ export default function RoomScreen({ code }) {
     }
   }
 
-  // The room fills the whole window and every control floats on top of it in a corner.
+  const hologram = !decorating && (
+    <Hologram scene={scene} open={playerOpen} place={playerPlace}>
+      <HoloPlayer player={player} />
+    </Hologram>
+  );
+
+  const zoomButtons = <ZoomControls zoom={view.zoom} onZoomIn={view.zoomIn} onZoomOut={view.zoomOut} onFit={view.fit} />;
+
+  // The room fills the whole window. Every control is in the side bar at the left.
   return (
-    <div ref={view.roomRef} className={`room${idle ? ' idle' : ''}`} style={{ '--zoom': view.zoom }} onWheel={view.onWheel}>
-      <SceneStage scene={scene} settings={settings} onSettingsChange={setSettings} items={items} frozen={decorating} onNextTrack={togglePlayer} still={view.zoom < MOVE_MIN_ZOOM}>
-        {!decorating && (
-          <Hologram scene={scene} open={playerOpen}>
-            <CdSlot />
-          </Hologram>
-        )}
+    <div ref={view.roomRef} className={`room${idle ? ' idle' : ''}${decorating ? ' decorating' : ''}${sidebarOpen ? ' side-on' : ''}`} style={{ '--zoom': view.zoom, '--drawn-zoom': drawnZoom }} onWheel={view.onWheel}>
+      <SceneStage scene={scene} settings={settings} onSettingsChange={setSettings} items={items} frozen={decorating} onNextTrack={togglePlayer} playing={player.playing} still={view.zoom < MOVE_MIN_ZOOM}>
+        {playerPlace === 'object' && hologram /* above the music object: part of the picture, it zooms with it */}
         {decorating && (
           <DecorateOverlay scene={scene} items={editor.items} selectedId={editor.selectedId} onSelect={editor.select} onMove={editor.move} />
         )}
       </SceneStage>
-      <div className="hud">
-        <div className="hud-tl">
-          <Link className="brand" to="/new" aria-label="Libsic Studio, start a new room">
-            <span className="brand-disc" aria-hidden="true" />
-            <span className="brand-name">Libsic Studio</span>
-          </Link>
-          <RoomNameField name={name} onNameChange={setName} />
-        </div>
-        {decorating ? (
-          <>
-            <DecorateHud scene={scene} editor={editor} onDone={() => setDecorating(false)} />
-            <div className="hud-bl hud-fade">
-              <ZoomControls zoom={view.zoom} onZoomIn={view.zoomIn} onZoomOut={view.zoomOut} onFit={view.fit} />
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="hud-tr hud-fade">
+      {playerPlace !== 'object' && hologram /* in the middle or at the top of the window */}
+      <Sidebar
+        open={sidebarOpen}
+        onToggle={toggleSidebar}
+        footer={
+          !decorating && (
+            <>
+              <RoomNameField name={name} onNameChange={setName} />
               <SaveBar
                 saved={saved}
                 isOwner={isOwner}
@@ -253,25 +282,107 @@ export default function RoomScreen({ code }) {
                 onCopy={copyLink}
               />
               <MyRooms rooms={myRooms} scenes={scenes} currentCode={code} onForget={forget} />
-            </div>
-            <div className="hud-mr hud-fade">
-              <ZoomControls zoom={view.zoom} onZoomIn={view.zoomIn} onZoomOut={view.zoomOut} onFit={view.fit} />
-            </div>
-            <div className="hud-bl hud-fade">
-              <Controls
-                scenes={scenes}
-                scene={scene}
-                settings={settings}
-                onChooseScene={chooseScene}
-                onSettingsChange={setSettings}
-                onDecorate={canDecorate ? () => setDecorating(true) : undefined}
-              />
-            </div>
+            </>
+          )
+        }
+      >
+        {decorating ? (
+          <>
+            <DecorateHud scene={scene} editor={editor} onDone={() => setDecorating(false)} />
+            <Section title="Zoom">{zoomButtons}</Section>
+          </>
+        ) : (
+          <>
+            <Controls
+              scenes={scenes}
+              scene={scene}
+              settings={settings}
+              onChooseScene={chooseScene}
+              onSettingsChange={setSettings}
+              onDecorate={canDecorate ? () => setDecorating(true) : undefined}
+            />
+            <More label="More settings">
+              <h2 className="side-title">Music player position</h2>
+              <div className="chip-row" role="group" aria-label="Player place">
+                {HOLO_PLACES.map((place) => (
+                  <button key={place.key} type="button" className="chip" title={place.label} aria-label={place.label} aria-pressed={place.key === playerPlace} onClick={() => choosePlayerPlace(place.key)}>
+                    {place.short}
+                  </button>
+                ))}
+              </div>
+              <h2 className="side-title">Zoom</h2>
+              {zoomButtons}
+            </More>
           </>
         )}
-      </div>
+      </Sidebar>
     </div>
   );
+}
+
+const PLAYER_OPEN_KEY = 'libsic.playerOpen';
+const PLAYER_PLACE_KEY = 'libsic.playerPlace';
+const SIDEBAR_KEY = 'libsic.sidebar';
+
+function readSidebarOpen() {
+  try {
+    const saved = localStorage.getItem(SIDEBAR_KEY);
+    if (saved) return saved === 'open';
+  } catch {
+    // fall through to the default
+  }
+  return window.innerWidth >= 700;
+}
+
+function readPlayerPlace() {
+  try {
+    const saved = localStorage.getItem(PLAYER_PLACE_KEY);
+    return HOLO_PLACES.some((p) => p.key === saved) ? saved : 'center';
+  } catch {
+    return 'center';
+  }
+}
+
+function readPlayerOpen() {
+  try {
+    return localStorage.getItem(PLAYER_OPEN_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+// Keyboard and mouse shortcuts of the player:
+//   Space          play or pause
+//   Left, Right    previous or next track
+//   Escape, or a click on an empty part of the picture   closes the hologram
+// Keys are left alone while the visitor types in a field or has a button or slider selected, because those use the same keys.
+function usePlayerShortcuts(player, open, setOpen) {
+  const { toggle, next, prev } = player;
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === 'Escape') return setOpen(false);
+      if (['INPUT', 'TEXTAREA', 'BUTTON', 'SELECT', 'A'].includes(e.target?.tagName)) return;
+      if (e.key === ' ') {
+        e.preventDefault(); // the page must not scroll
+        toggle();
+      } else if (e.key === 'ArrowRight') next();
+      else if (e.key === 'ArrowLeft') prev();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [toggle, next, prev, setOpen]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDown = (e) => {
+      // the hologram itself, the clickable objects and the side bar do not close it
+      if (e.target.closest?.('.holo, .hotspot, .sidebar, .side-open')) return;
+      setOpen(false);
+    };
+    document.addEventListener('pointerdown', onDown);
+    return () => document.removeEventListener('pointerdown', onDown);
+  }, [open, setOpen]);
 }
 
 // The message shown right after a room was saved (the page was opened with this note from the save button).

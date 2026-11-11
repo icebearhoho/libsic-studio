@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { makeParticles, between } from './particles.js';
+import { makeParticles, between, mulberry32 } from './particles.js';
 
 // Each effect is a pile of small elements animated with CSS (see scene.css).
 // The random numbers are fixed per effect, so nothing jumps when the page redraws.
@@ -8,14 +8,6 @@ const pct = (n) => `${n.toFixed(2)}%`;
 const sec = (n) => `${n.toFixed(2)}s`;
 
 const BUILDERS = {
-  rain: () =>
-    makeParticles(280, 11, (r) => ({
-      '--x': pct(between(r, -5, 105)),
-      '--len': px(between(r, 14, 34)),
-      '--dur': sec(between(r, 0.5, 0.95)),
-      '--delay': sec(-between(r, 0, 2)),
-      '--alpha': between(r, 0.25, 0.7).toFixed(2),
-    })),
   snow: () =>
     makeParticles(320, 22, (r) => ({
       '--x': pct(between(r, 0, 100)),
@@ -77,8 +69,65 @@ const BUILDERS = {
     })),
 };
 
+// Rain is drawn differently from the other effects. Hundreds of separate drops would each be one more thing for the
+// graphics card to move, so the drops are painted once into three see-through sheets (far, middle, near) that slide
+// down forever. Far rain is fine, slow and faint; near rain is long, fast and bright, which gives the rain depth.
+// On top of that a few drops sit on the window glass and run down it now and then.
+const SHEETS = [
+  { name: 'far', seed: 5, count: 90, length: [10, 22], width: 0.7, alpha: [0.18, 0.4] },
+  { name: 'mid', seed: 6, count: 60, length: [22, 42], width: 1, alpha: [0.25, 0.55] },
+  { name: 'near', seed: 7, count: 26, length: [46, 80], width: 1.5, alpha: [0.3, 0.6] },
+];
+const TILE = 300; // the sheet is a square picture that repeats; this is its size in drawing units
+const SLANT = 0.16; // the rain leans a little, as if there is some wind
+
+// The repeating picture of one sheet: slanted streaks, each fading in toward its lower end like a falling drop.
+export function rainTile({ seed, count, length, width, alpha }) {
+  const r = mulberry32(seed);
+  let lines = '';
+  for (let i = 0; i < count; i++) {
+    const len = between(r, length[0], length[1]);
+    const x = between(r, len * SLANT + 2, TILE - 2); // kept inside the square, so the repeat has no cut drops
+    const y = between(r, 2, TILE - len - 2);
+    lines += `<line x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${(x - len * SLANT).toFixed(1)}" y2="${(y + len).toFixed(1)}" stroke-opacity="${between(r, alpha[0], alpha[1]).toFixed(2)}"/>`;
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${TILE}" height="${TILE}" viewBox="0 0 ${TILE} ${TILE}"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cfe0ff" stop-opacity="0"/><stop offset="1" stop-color="#dbe8ff"/></linearGradient></defs><g stroke="url(#g)" stroke-width="${width}" stroke-linecap="round">${lines}</g></svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+
+function Rain() {
+  const sheets = useMemo(() => SHEETS.map((sheet) => ({ name: sheet.name, image: rainTile(sheet) })), []);
+  const drops = useMemo(
+    () =>
+      makeParticles(16, 12, (r) => ({
+        '--x': pct(between(r, 3, 97)),
+        '--y': pct(between(r, 4, 70)),
+        '--size': px(between(r, 3, 6.5)),
+        '--run': `${between(r, 10, 30).toFixed(0)}cqh`,
+        '--dur': sec(between(r, 7, 16)),
+        '--delay': sec(-between(r, 0, 16)),
+      })),
+    []
+  );
+  return (
+    <div className="effect effect-rain" data-effect="rain" aria-hidden="true">
+      {sheets.map((sheet) => (
+        <i key={sheet.name} className={`rain-sheet rain-${sheet.name}`} style={{ backgroundImage: sheet.image }} />
+      ))}
+      {drops.map((style, i) => (
+        <i key={i} className="rain-drop" style={style} />
+      ))}
+    </div>
+  );
+}
+
 // Draws one effect by name. 'none' (or an unknown name) draws nothing.
 export default function Effect({ name }) {
+  if (name === 'rain') return <Rain />;
+  return <Particles name={name} />;
+}
+
+function Particles({ name }) {
   const particles = useMemo(() => (BUILDERS[name] ? BUILDERS[name]() : []), [name]);
   if (particles.length === 0) return null;
   return (

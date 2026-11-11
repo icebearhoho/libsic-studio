@@ -1,10 +1,10 @@
 import { entryOf } from '../scene/placement.js';
 import DecorateTray from './DecorateTray.jsx';
 import ItemToolbar from './ItemToolbar.jsx';
+import { Section } from './Sidebar.jsx';
 
-// The buttons of decorate mode: Undo, Reset room and Done at the top right, the objects to add along the top
-// (the desk is below, so the tray never covers a place an object can stand), and the settings of the selected
-// object on the right.
+// What the side bar shows in decorate mode: Undo, Reset room and Done, the objects to add,
+// and the settings of the selected object.
 //   editor   what useItemsEditor returns
 export default function DecorateHud({ scene, editor, onDone }) {
   const selected = editor.items.find((item) => item.id === editor.selectedId);
@@ -12,8 +12,9 @@ export default function DecorateHud({ scene, editor, onDone }) {
 
   return (
     <>
-      <div className="hud-tr hud-fade">
-        <div className="savebar">
+      <Section title="Decorate">
+        <p className="muted">Drag an object in the room to move it. Click one to change it.</p>
+        <div className="chip-row">
           <button type="button" className="chip" disabled={!editor.canUndo} onClick={editor.undo}>
             Undo
           </button>
@@ -24,12 +25,9 @@ export default function DecorateHud({ scene, editor, onDone }) {
             Done
           </button>
         </div>
-      </div>
-      <div className="hud-tc hud-fade">
-        <DecorateTray scene={scene} items={editor.items} onAdd={editor.add} />
-      </div>
+      </Section>
       {entry && (
-        <div className="hud-mr hud-fade">
+        <Section title="Selected object">
           <ItemToolbar
             entry={entry}
             item={selected}
@@ -37,8 +35,11 @@ export default function DecorateHud({ scene, editor, onDone }) {
             onFlip={() => editor.flip(selected.id)}
             onRemove={() => editor.remove(selected.id)}
           />
-        </div>
+        </Section>
       )}
+      <Section title="Add objects">
+        <DecorateTray scene={scene} items={editor.items} onAdd={editor.add} />
+      </Section>
     </>
   );
 }

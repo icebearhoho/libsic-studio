@@ -1,12 +1,12 @@
 # Libsic Studio
 
-An ambient music room for the web. Pick a layered scene (rainy café, cozy cabin, moon base), load a CD into a retro CD player, click objects in the room to change the mood, then leave the page open while you study, work or relax. Rooms and CDs can be saved and shared with a short link.
+An ambient music room for the web. Pick a layered scene (Rainy Night Study, Golden Hour Loft, Clam Cove), load a CD into a retro CD player, click objects in the room to change the mood, then leave the page open while you study, work or relax. Rooms and CDs can be saved and shared with a short link.
 
 Course project for **Web Application Development**.
 
 ## Features
 
-- Layered 2D scenes with mouse-parallax depth and animated effects (rain, snow, fireflies, stars)
+- Layered 2D scenes with mouse-parallax depth and animated effects (rain, dust, bubbles, plankton and more)
 - Clickable objects in the room (window, lamp or neon sign, music object)
 - Full-screen room with floating controls that fade when idle, plus zoom in, zoom out and fit
 - Decorate mode: drag objects anywhere on the desk or the window glass, resize, flip, remove and add more from a tray, with undo and reset (see below)

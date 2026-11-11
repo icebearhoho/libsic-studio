@@ -228,3 +228,32 @@ describe('newItem', () => {
     expect(newItem(bigOnly, 'mug', []).scale).toBe(1.2);
   });
 });
+
+describe('shadows of placed objects', () => {
+  const surface = { key: 'desk', area: { x: 0, y: 50, width: 100, height: 50 }, drawAt: 1, perspective: { farY: 50, nearY: 100, farScale: 1, nearScale: 1 } };
+  const entry = (key) => ({ key, surface: 'desk', home: { x: 50, y: 80 }, bounds: { x: 45, y: 70, width: 10, height: 10 } });
+  const box = { x: 45, y: 70, width: 10, height: 10 };
+  const shadowScene = {
+    layers: [
+      { name: 'back' },
+      { name: 'front' },
+      { name: 'mug shadow', item: 'mug', box, mirror: false },
+      { name: 'mug', item: 'mug', box },
+      { name: 'lamp shadow', item: 'lamp', box, mirror: false },
+      { name: 'lamp', item: 'lamp', box },
+    ],
+    surfaces: [surface],
+    catalog: [entry('mug'), entry('lamp')],
+  };
+
+  it('draws every shadow before the objects, so no shadow is painted over an object', () => {
+    const items = [
+      { id: 'mug', key: 'mug', x: 40, y: 70, scale: 1, flip: false },
+      { id: 'lamp', key: 'lamp', x: 60, y: 90, scale: 1, flip: true },
+    ];
+    const list = buildDrawList(shadowScene, items);
+    expect(list.map((e) => e.layer.name)).toEqual(['back', 'mug shadow', 'lamp shadow', 'mug', 'lamp', 'front']);
+    expect(list.find((e) => e.layer.name === 'lamp shadow').flip).toBe(false); // a shadow keeps its side
+    expect(list.find((e) => e.layer.name === 'lamp').flip).toBe(true);
+  });
+});

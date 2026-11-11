@@ -29,6 +29,7 @@ function saveZoom(zoom) {
 // With { panning: false } the picture stays in the middle instead of following the mouse (while decorating).
 export function useRoomView({ panning = true } = {}) {
   const roomRef = useRef(null);
+  const lastPointer = useRef({ x: 0.5, y: 0.5 }); // where the mouse was last, from 0 to 1 across the window
   const [size, setSize] = useState(windowSize);
   const [chosen, setChosen] = useState(readSavedZoom); // null until the visitor picks a zoom
   const zoom = chosen ?? startZoom(size.width, size.height);
@@ -59,11 +60,17 @@ export function useRoomView({ panning = true } = {}) {
       room.style.setProperty('--pan-x', `${x}px`);
       room.style.setProperty('--pan-y', `${y}px`);
     };
-    shift({ x: 0.5, y: 0.5 });
-    if (!panning || zoom < MOVE_MIN_ZOOM) return undefined;
+    const follows = panning && zoom >= MOVE_MIN_ZOOM;
+    // After a zoom step the picture stays where the mouse is looking. Jumping back to the middle first and to the
+    // mouse on its next move made the picture shake at every step.
+    shift(follows ? lastPointer.current : { x: 0.5, y: 0.5 });
+    // The mouse is watched at every zoom, also while the picture does not follow it yet. Otherwise the first zoom
+    // step that makes it follow would use an old mouse position, and the picture would jump on the next move.
     const onMove = (e) => {
+      lastPointer.current = { x: e.clientX / size.width, y: e.clientY / size.height };
+      if (!follows) return;
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => shift({ x: e.clientX / size.width, y: e.clientY / size.height }));
+      frame = requestAnimationFrame(() => shift(lastPointer.current));
     };
     window.addEventListener('pointermove', onMove, { passive: true });
     return () => {
@@ -89,4 +96,26 @@ export function useRoomView({ panning = true } = {}) {
   const onWheel = (e) => setZoom(e.deltaY < 0 ? zoom * ZOOM_STEP : zoom / ZOOM_STEP);
 
   return { roomRef, zoom, zoomIn, zoomOut, fit, onWheel };
+}
+
+// The zoom the picture is drawn with. A room that has just been opened is drawn at its normal size for two frames
+// and only then enlarged to the chosen zoom. The graphics card keeps the sheet of each layer at the size it was
+// first drawn in, so this keeps the sheets small. Drawn first at a big zoom they would be big for good, and zooming
+// out again would need more graphics memory than many computers have (layers then go black).
+//   key   changes when another room is opened (the scene's slug)
+export function useDrawnZoom(zoom, key) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    setReady(false);
+    if (typeof requestAnimationFrame !== 'function') return undefined;
+    let second = 0;
+    const first = requestAnimationFrame(() => {
+      second = requestAnimationFrame(() => setReady(true));
+    });
+    return () => {
+      cancelAnimationFrame(first);
+      cancelAnimationFrame(second);
+    };
+  }, [key]);
+  return ready ? zoom : 1;
 }
