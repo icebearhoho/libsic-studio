@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import CdRow from './CdRow.jsx';
 import { cdLook } from './cdLook.js';
 import { DISCOVERY_PLAYLISTS } from './discovery.js';
-import { rememberCd } from './myCds.js';
+import { getMyCds, rememberCd } from './myCds.js';
 import * as api from '../api.js';
 
 const STUDIO = [
@@ -61,6 +61,19 @@ describe('the row of CDs', () => {
     await openRow();
     expect(screen.getByRole('listitem', { name: 'Friend mix, Shared CD' })).toHaveTextContent('SH');
     expect(screen.getByText('Friend mix', { selector: '.cdc-now, .cdc-now *' })).toBeInTheDocument();
+  });
+
+  it('saves a shared room\'s CD to this browser, where it is a normal CD that can be forgotten again', async () => {
+    vi.spyOn(api, 'getCds').mockResolvedValue(STUDIO);
+    show({ cdCode: 'friend-1', loadedCd: { code: 'friend-1', title: 'Friend mix', links: [], tracks: [], look: { hue: 10, cover: 0, disc: 0, font: 0 } } });
+    await openRow();
+    await userEvent.click(screen.getByRole('button', { name: 'Save this CD' }));
+    expect(getMyCds()).toEqual([{ code: 'friend-1', title: 'Friend mix', editKey: '', look: { hue: 10, cover: 0, disc: 0, font: 0 }, shared: true }]);
+    expect(screen.getByRole('listitem', { name: 'Friend mix, Saved CD' })).toHaveTextContent('ME');
+    expect(screen.queryByRole('button', { name: 'Save this CD' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Forget this CD' }));
+    expect(getMyCds()).toEqual([]);
+    expect(screen.getByRole('listitem', { name: 'Friend mix, Shared CD' })).toBeInTheDocument();
   });
 
   it('opens a slip of paper to make a CD or add music', async () => {
@@ -303,12 +316,17 @@ describe('links that were pasted', () => {
     expect(screen.getByRole('listitem', { name: 'Rainy Day Mix, SoundCloud link' })).toBeInTheDocument(); // still shown while it plays
   });
 
-  it('keeps a link that came with a shared room', async () => {
+  it('does not keep a link that came with a shared room until it is saved', async () => {
     vi.spyOn(api, 'getCds').mockResolvedValue([]);
     show({ source: { provider: 'youtube', url: 'https://www.youtube.com/watch?v=abc&list=PL1' } });
     await screen.findByRole('listitem', { name: 'YouTube playlist, YouTube link' });
-    await waitFor(() => expect(JSON.parse(localStorage.getItem('libsic.links'))).toHaveLength(1));
+    expect(localStorage.getItem('libsic.links')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Save this link' }));
+    expect(JSON.parse(localStorage.getItem('libsic.links'))).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: 'Save this link' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Forget this link' })).toBeInTheDocument();
   });
+
 });
 
 describe('the tracks of a playlist', () => {
