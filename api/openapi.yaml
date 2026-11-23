@@ -658,7 +658,7 @@ components:
 
     Effect:
       type: string
-      enum: [rain, snow, fireflies, stars, dust, bubbles, plankton]
+      enum: [rain, snow, fireflies, stars, dust, bubbles, plankton, glitter]
       description: An animated weather or sky effect.
 
     SceneSummary:
@@ -990,7 +990,7 @@ components:
       properties:
         effect:
           type: string
-          enum: [none, rain, snow, fireflies, stars, dust, bubbles, plankton]
+          enum: [none, rain, snow, fireflies, stars, dust, bubbles, plankton, glitter]
           default: none
         lightOn:
           type: boolean
