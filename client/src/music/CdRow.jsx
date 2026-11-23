@@ -131,14 +131,14 @@ export default function CdRow({ source, cdCode, player, loading, error, onChoose
   const items = useMemo(() => {
     const own = (studio || []).map((cd) => ({ kind: 'studio', key: cd.code, title: cd.title, sub: `Studio · ${cd.tracks?.length ?? 0} tracks` }));
     const online = DISCOVERY_PLAYLISTS.map((p) => ({ kind: 'soundcloud', key: p.url, title: p.title, sub: 'SoundCloud playlist' }));
-    const made = mine.map((cd) => ({ kind: 'mine', key: cd.code, title: cd.title, sub: 'My CD' }));
+    const made = mine.map((cd) => ({ kind: 'mine', key: cd.code, title: cd.title, sub: 'My CD', custom: cd.look }));
     const known = new Set(online.map((item) => item.key));
     // pasted links stay on the shelf; a link that is playing but not saved yet (a shared room) is shown too
     const saved = links.filter((link) => !known.has(link.url)).map((link) => ({ kind: 'link', key: link.url, provider: link.provider, title: linkTitle(link), sub: `${providerName(link.provider)} link`, saved: true }));
     const playing = source && !known.has(source.url) && !saved.some((item) => item.key === source.url)
       ? [{ kind: 'link', key: source.url, provider: source.provider, title: linkTitle(source), sub: `${providerName(source.provider)} link`, saved: false }]
       : [];
-    return [...own, ...online, ...made, ...saved, ...playing].map((item, index) => ({ ...item, number: index + 1, look: cdLook(item.key, item.title) }));
+    return [...own, ...online, ...made, ...saved, ...playing].map((item, index) => ({ ...item, number: index + 1, look: cdLook(item.key, item.title, item.custom) }));
   }, [studio, mine, links, source]);
   // A link that arrives another way (a shared room) is kept as well. Only a change of the link counts, so "Forget" sticks.
   const sourceUrl = source?.url;
@@ -259,7 +259,7 @@ export default function CdRow({ source, cdCode, player, loading, error, onChoose
             <button type="submit" className="cdc-brass" disabled={!link.trim() || busy}>{busy ? 'Loading…' : 'Load'}</button>
           </div>
           {linkError && <p className="cdc-board-note" role="alert">{linkError}</p>}
-          <small>Or <Link to="/music" aria-label="Make a CD">make a CD</Link> from our tracks and get a share code.</small>
+          <small>Or <Link to="/music" aria-label="Make a CD">make a CD</Link> from several links or our tracks and get a share code.</small>
         </form>
       )}
 

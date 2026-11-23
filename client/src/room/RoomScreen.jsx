@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { createRoom, deleteRoom, getRoom, getScene, getScenes, getCd, updateRoom } from '../api.js';
 import CdRow from '../music/CdRow.jsx';
@@ -75,7 +75,40 @@ export default function RoomScreen({ code }) {
   const [musicLoading, setMusicLoading] = useState(false);
   const [musicAttempt, setMusicAttempt] = useState(0);
   const cdPlayer = usePlayer(cd);
-  const player = musicSource ? onlinePlayer : cdPlayer;
+  // A CD made of online links plays them one after the other: `linkIndex` is the link now in the player. `queueRound` counts
+  // the steps, so a one-link CD starts again when it ends. `queueAutoplay` is true when the next link should start by itself.
+  const [linkIndex, setLinkIndex] = useState(0);
+  const [queueRound, setQueueRound] = useState(0);
+  const [queueAutoplay, setQueueAutoplay] = useState(false);
+  const linkCd = cdCode && cd.code === cdCode && cd.links?.length ? cd : null;
+  const linkCount = linkCd?.links.length ?? 0;
+  const queueSource = linkCd ? linkCd.links[linkIndex % linkCount] : null;
+  const activeSource = musicSource ?? queueSource;
+  const stepLink = useCallback((step, play) => {
+    setLinkIndex((i) => (i + step + linkCount) % linkCount);
+    setQueueRound((n) => n + 1);
+    setQueueAutoplay(Boolean(play));
+    setOnlinePlayer(EMPTY_ONLINE_PLAYER);
+  }, [linkCount]);
+  const queuePlayer = useMemo(() => {
+    if (!linkCd) return null;
+    const inside = onlinePlayer.canNavigate !== false && onlinePlayer.count > 1;
+    return {
+      ...onlinePlayer,
+      cd: { ...onlinePlayer.cd, title: linkCd.title },
+      index: linkIndex % linkCount,
+      count: linkCount,
+      canNavigate: linkCount > 1 || inside,
+      // inside a playlist link the buttons move between its tracks; at its edges they move to the next link
+      next: () => (inside && onlinePlayer.index < onlinePlayer.count - 1 ? onlinePlayer.next() : stepLink(1, onlinePlayer.playing)),
+      prev: () => {
+        if (onlinePlayer.time > 3) onlinePlayer.seek?.(0);
+        else if (inside && onlinePlayer.index > 0) onlinePlayer.prev();
+        else stepLink(-1, onlinePlayer.playing);
+      },
+    };
+  }, [linkCd, linkIndex, linkCount, onlinePlayer, stepLink]);
+  const player = activeSource ? queuePlayer ?? onlinePlayer : cdPlayer;
   const chooseSource = (source) => {
     if (source && musicSource?.url === source.url) { setPlayerOpen(true); return; }
     cdPlayer.pause();
@@ -86,6 +119,9 @@ export default function RoomScreen({ code }) {
   };
   const chooseCd = (nextCode) => {
     setMusicSource(null);
+    setLinkIndex(0);
+    setQueueAutoplay(false);
+    setOnlinePlayer(EMPTY_ONLINE_PLAYER);
     setCdCode(nextCode);
     setMusicAttempt((n) => n + 1);
     if (nextCode) setPlayerOpen(true);
@@ -140,12 +176,12 @@ export default function RoomScreen({ code }) {
   // Keep YouTube video visible whenever it is playing. The phone's open menu covers the player.
   useEffect(() => {
     const pauseCoveredVideo = () => {
-      if (musicSource?.provider === 'youtube' && sidebarOpen && window.innerWidth < 700 && player.playing) player.pause();
+      if (activeSource?.provider === 'youtube' && sidebarOpen && window.innerWidth < 700 && player.playing) player.pause();
     };
     pauseCoveredVideo();
     window.addEventListener('resize', pauseCoveredVideo);
     return () => window.removeEventListener('resize', pauseCoveredVideo);
-  }, [musicSource, sidebarOpen, player.playing, player.pause]);
+  }, [activeSource, sidebarOpen, player.playing, player.pause]);
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
     try {
@@ -346,7 +382,7 @@ export default function RoomScreen({ code }) {
 
   // The disc that turns on the player is the printed face of the chosen CD (the same paint as its case on the shelf).
   const discKey = musicSource ? musicSource.url : cdCode;
-  const discFace = discKey ? cdLook(discKey).face : null;
+  const discFace = discKey ? cdLook(discKey, '', cdCode && !musicSource && cd.code === cdCode ? cd.look : null).face : null;
 
   const zoomButtons = <ZoomControls zoom={view.zoom} onZoomIn={view.zoomIn} onZoomOut={view.zoomOut} onFit={view.fit} />;
 
@@ -438,7 +474,16 @@ export default function RoomScreen({ code }) {
           onRetry={() => chooseCd(cdCode)}
         />
       )}
-      {musicSource && <ExternalMusic key={`${musicSource.provider}:${musicSource.url}`} source={musicSource} onPlayer={setOnlinePlayer} onClose={() => chooseSource(null)} />}
+      {activeSource && (
+        <ExternalMusic
+          key={`${activeSource.provider}:${activeSource.url}:${musicSource ? 0 : queueRound}`}
+          source={activeSource}
+          onPlayer={setOnlinePlayer}
+          onClose={() => chooseSource(null)}
+          onEnded={linkCd && !musicSource ? () => stepLink(1, true) : undefined}
+          autoplay={Boolean(linkCd && !musicSource && queueAutoplay)}
+        />
+      )}
     </div>
   );
 }
