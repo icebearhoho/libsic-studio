@@ -4,7 +4,7 @@ import Effect from './Effects.jsx';
 import { useFramePace } from './framePace.js';
 import { useParallax } from './parallax.js';
 import { buildDrawList, defaultItems } from './placement.js';
-import { applyObjectAction } from './sceneSettings.js';
+import { activeEffect, applyObjectAction } from './sceneSettings.js';
 import './scene.css';
 
 // Draws one scene: its layers stacked on top of each other (moving with the mouse),
@@ -108,7 +108,7 @@ export default function SceneStage({ scene, settings, onSettingsChange, onNextTr
         ) : (
           <>
             {content(layer, flip)}
-            {templateIndex === scene.effectLayer && <Effect name={settings.effect} />}
+            {templateIndex === scene.effectLayer && <Effect name={activeEffect(scene, settings.effect)} />}
             {hotspots(templateIndex)}
           </>
         )}

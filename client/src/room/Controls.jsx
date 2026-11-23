@@ -1,5 +1,6 @@
 import { Section } from './Sidebar.jsx';
 import { skinOf } from './skins.js';
+import { activeEffect } from '../scene/sceneSettings.js';
 
 const EFFECT_NAMES = { rain: 'Rain', snow: 'Snow', fireflies: 'Fireflies', stars: 'Stars', dust: 'Dust', bubbles: 'Bubbles', plankton: 'Plankton', glitter: 'Glitter' };
 
@@ -67,8 +68,8 @@ export default function Controls({ scenes, scene, settings, onChooseScene, onSet
                 key={name}
                 type="button"
                 className="stamp"
-                aria-pressed={settings.effect === name}
-                onClick={() => onSettingsChange({ ...settings, effect: settings.effect === name ? 'none' : name })}
+                aria-pressed={activeEffect(scene, settings.effect) === name}
+                onClick={() => onSettingsChange({ ...settings, effect: activeEffect(scene, settings.effect) === name ? 'none' : name })}
               >
                 <Icon>{EFFECT_ICONS[name] || DOTS}</Icon>
                 <span>{EFFECT_NAMES[name] || name}</span>
