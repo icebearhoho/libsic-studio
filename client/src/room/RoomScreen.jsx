@@ -484,6 +484,7 @@ export default function RoomScreen({ code }) {
         <CdRow
           source={musicSource}
           cdCode={cdCode}
+          loadedCd={cd}
           player={player}
           loading={musicLoading}
           error={musicError}

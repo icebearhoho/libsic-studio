@@ -55,6 +55,14 @@ describe('the row of CDs', () => {
     expect(screen.getByRole('listitem', { name: 'Exam Week, My CD' })).toHaveTextContent('ME 05');
   });
 
+  it('stands a CD that came with a shared room in the tower and names it in the player', async () => {
+    vi.spyOn(api, 'getCds').mockResolvedValue(STUDIO);
+    show({ cdCode: 'friend-1', loadedCd: { code: 'friend-1', title: 'Friend mix', links: [], tracks: [], look: { hue: 10, cover: 0, disc: 0, font: 0 } } });
+    await openRow();
+    expect(screen.getByRole('listitem', { name: 'Friend mix, Shared CD' })).toHaveTextContent('SH');
+    expect(screen.getByText('Friend mix', { selector: '.cdc-now, .cdc-now *' })).toBeInTheDocument();
+  });
+
   it('opens a slip of paper to make a CD or add music', async () => {
     vi.spyOn(api, 'getCds').mockResolvedValue([]);
     show();

@@ -22,7 +22,7 @@ import { uiScaleFor } from '../room/useUiScale.js';
 //   onChooseCd        a CD of ours was chosen by its code
 //   onEject           take whatever is playing out of the player
 //   onRetry           try loading the same CD again
-const SOURCE_MARK = { studio: 'LS', soundcloud: 'SC', mine: 'ME', link: 'LK' };
+const SOURCE_MARK = { studio: 'LS', soundcloud: 'SC', mine: 'ME', link: 'LK', shared: 'SH' };
 const isLink = (text) => /^(https?:\/\/|spotify:)/i.test(text);
 
 // The front of a pulled-out CD is 118 px square with a small label under it (about 142 px in all, measured in the tower's own pixels).
@@ -65,7 +65,7 @@ function flyDisc(fromElement, face) {
   flight.oncancel = () => disc.remove();
 }
 
-export default function CdRow({ source, cdCode, player, loading, error, onChooseSource, onChooseCd, onEject, onRetry }) {
+export default function CdRow({ source, cdCode, loadedCd, player, loading, error, onChooseSource, onChooseCd, onEject, onRetry }) {
   const [links, setLinks] = useState(getMyLinks); // links pasted earlier, kept in this browser
   const [pinned, setPinned] = useState(false); // a tap on the tag keeps the tower lifted (for screens without a mouse)
   const [hovered, setHovered] = useState(null); // { item, top }: the CD that is pulled out, and where its front is shown
@@ -138,8 +138,12 @@ export default function CdRow({ source, cdCode, player, loading, error, onChoose
     const playing = source && !known.has(source.url) && !saved.some((item) => item.key === source.url)
       ? [{ kind: 'link', key: source.url, provider: source.provider, title: linkTitle(source), sub: `${providerName(source.provider)} link`, saved: false }]
       : [];
-    return [...own, ...online, ...made, ...saved, ...playing].map((item, index) => ({ ...item, number: index + 1, look: cdLook(item.key, item.title, item.custom) }));
-  }, [studio, mine, links, source]);
+    // A CD that came with a shared room is not on this browser's shelf; it stands there while it is in the player.
+    const shared = cdCode && loadedCd?.code === cdCode && ![...own, ...made].some((item) => item.key === cdCode)
+      ? [{ kind: 'shared', key: cdCode, title: loadedCd.title, sub: 'Shared CD', custom: loadedCd.look }]
+      : [];
+    return [...own, ...online, ...made, ...shared, ...saved, ...playing].map((item, index) => ({ ...item, number: index + 1, look: cdLook(item.key, item.title, item.custom) }));
+  }, [studio, mine, links, source, cdCode, loadedCd]);
   // A link that arrives another way (a shared room) is kept as well. Only a change of the link counts, so "Forget" sticks.
   const sourceUrl = source?.url;
   const sourceProvider = source?.provider;
