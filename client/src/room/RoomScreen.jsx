@@ -341,12 +341,16 @@ export default function RoomScreen({ code }) {
       navigate(`/r/${room.code}`, { replace: true, state: { justSaved: true, unsavedKey: remembered ? null : newKey } });
     });
 
+  // Sends this room's changes to the API (the owner's edit key is the proof). Used by "Save changes" and by "Copy link".
+  async function persistChanges() {
+    const room = await updateRoom(saved.code, editKey, payload());
+    setSaved(room);
+    updateMyRoom(room.code, { name: room.name, sceneSlug: room.sceneSlug });
+    setMyRooms(getMyRooms());
+  }
   const saveChanges = () =>
     run(async () => {
-      const room = await updateRoom(saved.code, editKey, payload());
-      setSaved(room);
-      updateMyRoom(room.code, { name: room.name, sceneSlug: room.sceneSlug });
-      setMyRooms(getMyRooms());
+      await persistChanges();
       setStatus({ kind: 'ok', text: 'Changes saved.' });
     });
 
@@ -365,10 +369,25 @@ export default function RoomScreen({ code }) {
     setMyRooms(getMyRooms());
   };
 
+  // The link opens the SAVED room, so an owner's unsaved changes (a new CD, another scene...) are saved first. Otherwise
+  // the person who opens the link would see the old room, for example without the CD.
   async function copyLink() {
+    let saving = false;
+    if (isOwner && dirty) {
+      setBusy(true);
+      try {
+        await persistChanges();
+        saving = true;
+      } catch (err) {
+        setStatus({ kind: 'error', text: `Your changes are not saved yet, so the link would show the old room. ${err.message}` });
+        return;
+      } finally {
+        setBusy(false);
+      }
+    }
     try {
       await navigator.clipboard.writeText(link);
-      setStatus({ kind: 'ok', text: 'Link copied.' });
+      setStatus({ kind: 'ok', text: saving ? 'Changes saved. Link copied.' : 'Link copied.' });
     } catch {
       setStatus({ kind: 'error', text: 'Could not copy automatically. Select the link and copy it by hand.' });
     }
