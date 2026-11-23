@@ -76,6 +76,16 @@ describe('the row of CDs', () => {
     expect(screen.getByRole('listitem', { name: 'Friend mix, Shared CD' })).toBeInTheDocument();
   });
 
+  it('offers Edit for a CD this browser made (it has an edit key) but not for studio CDs or saved ones', async () => {
+    vi.spyOn(api, 'getCds').mockResolvedValue(STUDIO);
+    rememberCd({ code: 'mine-1', title: 'Exam Week', editKey: 'k' });
+    rememberCd({ code: 'friend-1', title: 'Friend mix', editKey: '', shared: true });
+    const view = show({ cdCode: 'mine-1' });
+    await openRow();
+    expect(screen.getByRole('link', { name: 'Edit this CD' })).toHaveAttribute('href', '/cd/mine-1?edit=1');
+    view.unmount?.();
+  });
+
   it('opens a slip of paper to make a CD or add music', async () => {
     vi.spyOn(api, 'getCds').mockResolvedValue([]);
     show();

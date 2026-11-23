@@ -163,3 +163,18 @@ describe('CDs made of online links', () => {
     expect(api.updateCd).toHaveBeenCalledWith(linkCd.code, 'link-secret', { title: 'Renamed mix', trackIds: [], links: [youtube], look: { hue: 200, cover: 1, disc: 3, font: 3 } });
   });
 });
+
+describe('the Edit button of the shelf', () => {
+  it('opens the editor at once for a CD whose edit key this browser holds', async () => {
+    rememberCd({ code: cd.code, title: cd.title, editKey: 'secret' });
+    renderAt(`/cd/${cd.code}?edit=1`);
+    expect(await screen.findByLabelText('CD name')).toHaveValue('My mix');
+    expect(screen.getByRole('button', { name: 'Save CD changes' })).toBeInTheDocument();
+  });
+
+  it('does not open the editor for someone else\'s CD', async () => {
+    renderAt(`/cd/${cd.code}?edit=1`);
+    await screen.findByRole('heading', { name: cd.title });
+    expect(screen.queryByLabelText('CD name')).toBeNull();
+  });
+});

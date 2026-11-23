@@ -22,7 +22,7 @@ function CdDetails({ code }) {
   const [notFound, setNotFound] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [busy, setBusy] = useState(false);
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(() => new URLSearchParams(location.search).has('edit') && Boolean(location.state?.recoveryKey || getMyCds().find((e) => e.code === code)?.editKey)); // the shelf's Edit button opens the editor at once
   const [deleting, setDeleting] = useState(false);
   const [deleted, setDeleted] = useState(false);
   const [status, setStatus] = useState(location.state?.justCreated ? 'CD created. Your share link is ready.' : '');

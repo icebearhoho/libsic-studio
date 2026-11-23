@@ -58,6 +58,8 @@
 .cdc-all { padding-inline: 8px; }
 .cdc-brass:disabled { opacity: .5; cursor: default; }
 .cdc-brass[aria-pressed=true] { filter: brightness(.92); }
+a.cdc-brass { text-decoration: none; }
+.cdw-edit { margin-left: auto; border-color: var(--brass-ink); background: var(--brass-ink); color: var(--brass); }
 
 /* the tower: oak side panel on the left, top cap, a dark back, a base */
 .cdc-tower { position: relative; padding-left: 26px; filter: drop-shadow(0 14px 18px #000a); }

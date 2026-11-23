@@ -131,7 +131,7 @@ export default function CdRow({ source, cdCode, loadedCd, player, loading, error
   const items = useMemo(() => {
     const own = (studio || []).map((cd) => ({ kind: 'studio', key: cd.code, title: cd.title, sub: `Studio · ${cd.tracks?.length ?? 0} tracks` }));
     const online = DISCOVERY_PLAYLISTS.map((p) => ({ kind: 'soundcloud', key: p.url, title: p.title, sub: 'SoundCloud playlist' }));
-    const made = mine.map((cd) => ({ kind: 'mine', key: cd.code, title: cd.title, sub: cd.shared ? 'Saved CD' : 'My CD', custom: cd.look, keptFromRoom: Boolean(cd.shared) }));
+    const made = mine.map((cd) => ({ kind: 'mine', key: cd.code, title: cd.title, sub: cd.shared ? 'Saved CD' : 'My CD', custom: cd.look, keptFromRoom: Boolean(cd.shared), editable: Boolean(cd.editKey) }));
     const known = new Set(online.map((item) => item.key));
     // pasted links stay on the shelf; a link that is playing but not saved yet (a shared room) is shown too
     const saved = links.filter((link) => !known.has(link.url)).map((link) => ({ kind: 'link', key: link.url, provider: link.provider, title: linkTitle(link), sub: `${providerName(link.provider)} link`, saved: true }));
@@ -272,6 +272,7 @@ export default function CdRow({ source, cdCode, loadedCd, player, loading, error
             {current?.kind === 'link' && !current.saved && <button type="button" className="cdc-brass" aria-label="Save this link" onClick={() => setLinks(rememberLink({ provider: current.provider, url: current.key }))}>Save</button>}
             {current?.saved && <button type="button" className="cdc-brass" aria-label="Forget this link" onClick={() => setLinks(forgetLink(current.key))}>Forget</button>}
             {current?.kind === 'shared' && <button type="button" className="cdc-brass" aria-label="Save this CD" onClick={() => { rememberCd({ code: current.key, title: current.title, editKey: '', look: current.custom ?? undefined, shared: true }); setMine(getMyCds()); }}>Save</button>}
+            {current?.editable && <Link className="cdc-brass" to={`/cd/${encodeURIComponent(current.key)}?edit=1`} aria-label="Edit this CD">Edit</Link>}
             {current?.keptFromRoom && <button type="button" className="cdc-brass" aria-label="Forget this CD" onClick={() => { forgetCd(current.key); setMine(getMyCds()); }}>Forget</button>}
             {(source || cdCode) && <button type="button" className="cdc-brass" aria-label="Take the CD out of the player" onClick={onEject}>Eject</button>}
           </div>
@@ -347,6 +348,7 @@ export default function CdRow({ source, cdCode, loadedCd, player, loading, error
               <b>{shown ? shown.title : loaded ? 'Online music' : 'Pick a CD'}</b>
               <small>{aim ? aim.sub : shown ? `In the player · ${shown.sub}` : 'Point at a CD, click to play it'}</small>
             </span>
+            {current?.editable && <Link className="cdc-brass cdw-edit" to={`/cd/${encodeURIComponent(current.key)}?edit=1`} aria-label="Edit this CD">Edit CD</Link>}
           </p>
         </div>
       </div>
